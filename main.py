@@ -64,6 +64,18 @@ def cxGeneralizedOrdered(ind1, ind2):
 
 
 def initial_pop(*mtpl):
+    """Generate the initial permutation population.
+
+    Generate the initial population of our permutations. We generate the two
+    canonical lexigraphic permutations and use these to perform genetic
+    operations.
+
+    This function takes as arguments the number of bits in each dimension,
+    where the number of dimensions is variable. For example, argument list [3,
+    3] generates the permutations [aaabbb, bbbaaa]. Similarly, argument [2, 2,
+    2] generates permutations [aabbcc, ccbbaa].
+    """
+
     q = [i for (i, j) in enumerate(mtpl) for _ in range(j)]
     return [q, q[::-1]]
 
@@ -125,7 +137,7 @@ if __name__ == "__main__" or True:
     toolbox.register("mutate", deap.tools.mutShuffleIndexes, indpb=0.2)
     toolbox.register("select", deap.tools.selTournament, tournsize=3)
 
-    population = [deap.creator.Individual(x) for x in initial_pop(3, 3)]
+    population = [deap.creator.Individual(x) for x in initial_pop(8, 8)]
 
     stats = deap.tools.Statistics(key=lambda ind: ind.fitness.values)
 
