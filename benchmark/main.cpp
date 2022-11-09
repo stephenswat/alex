@@ -9,6 +9,10 @@
 
 #define _N 3
 
+#ifndef PERMUTATION
+#define PERMUTATION 0,0,0,1,1,1
+#endif
+
 #ifndef TRIALS
 #define TRIALS 1
 #endif
@@ -32,3 +36,7 @@ int main() {
 
     return 0;
 }
+
+using matrix_t = matrix<std::index_sequence<PERMUTATION>>;
+
+template float & matrix_t::operator()(std::size_t, std::size_t);

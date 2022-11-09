@@ -84,6 +84,8 @@ def eval(root, individual):
                     "-march=x86-64-v3",
                     "-mtune=generic",
                     "-std=c++17",
+                    "-DNDEBUG",
+                    "-DPERMUTATION=%s" % ",".join(str(x) for x in individual),
                     "-o",
                     dirname / "run",
                     pathlib.Path(os.path.dirname(os.path.realpath(__file__)))
@@ -123,7 +125,7 @@ if __name__ == "__main__" or True:
     toolbox.register("mutate", deap.tools.mutShuffleIndexes, indpb=0.2)
     toolbox.register("select", deap.tools.selTournament, tournsize=3)
 
-    population = [deap.creator.Individual(x) for x in initial_pop(3, 3, 3)]
+    population = [deap.creator.Individual(x) for x in initial_pop(3, 3)]
 
     stats = deap.tools.Statistics(key=lambda ind: ind.fitness.values)
 
