@@ -153,7 +153,7 @@ if __name__ == "__main__" or True:
         50,
         cxpb=0.5,
         mutpb=0.2,
-        ngen=10,
+        ngen=100,
         stats=stats,
         verbose=True,
     )
@@ -161,5 +161,5 @@ if __name__ == "__main__" or True:
     print()
     print("Best results:")
 
-    for i in deap.tools.selBest(pop, k=10):
-        print("% 10.2f %s" % (i.fitness.values[0], "".join(str(j) for j in i)))
+    for i in sort(deap.tools.selBest(pop, k=10), key=lambda x: x.fitness.values[0], reverse=True):
+        print("% 12.8f %s" % (i.fitness.values[0], "".join(str(j) for j in i)))
