@@ -1,0 +1,31 @@
+caches:
+  L1:
+    sets: 64
+    ways: 8
+    line: 64
+    replacement: LRU
+    write_back: true
+    store_to: L2
+    load_from: L2
+    latency: 4
+  L2:
+    sets: 1024
+    ways: 8
+    line: 64
+    replacement: LRU
+    write_back: true
+    store_to: L3
+    load_from: L3
+    victim_to: L3
+    latency: 12
+  L3:
+    sets: 32768
+    ways: 16
+    line: 64
+    replacement: LRU
+    write_back: true
+    latency: 46
+memory:
+  first: L1
+  last: L3
+  latency: 200

@@ -1,0 +1,7 @@
+setup.py
+*.lock
+build/
+dist/
+*.so
+__pycache__/
+*.egg-info/

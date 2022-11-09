@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "alex"
+version = "0.1.0"
+description = ""
+authors = ["Stephen Nicholas Swatman <stephen@v25.nl>"]
+license = "Unlicense"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8.1"
+pycachesim = "0.3.1"
+pybind11 = "2.10.3"
+pyyaml = "^6.0"
+pydantic = "^1.10.7"
+numpy = "^1.24.3"
+
+[tool.poetry.group.dev.dependencies]
+black = "*"
+ipython = "8.12.0"
+flake8 = "^6.0.0"
+isort = "^5.12.0"
+
+[tool.poetry.scripts]
+alex = "alex.cli:main"
+
+[tool.poetry.build]
+script = "build.py"
+generate-setup-file = true
+
+[build-system]
+requires = ["poetry-core>=1.2.0", "setuptools", "pybind11>=2.10.3", "pycachesim==0.3.1"]
+build-backend = "poetry.core.masonry.api"
