@@ -153,9 +153,13 @@ if __name__ == "__main__" or True:
         50,
         cxpb=0.5,
         mutpb=0.2,
-        ngen=40,
+        ngen=10,
         stats=stats,
         verbose=True,
     )
 
-    print(pop)
+    print()
+    print("Best results:")
+
+    for i in deap.tools.selBest(pop, k=10):
+        print("% 10.2f %s" % (i.fitness.values[0], "".join(str(j) for j in i)))
