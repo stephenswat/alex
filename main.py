@@ -62,6 +62,18 @@ def cxGeneralizedOrdered(ind1, ind2):
 
     return (ind1, ind2)
 
+def mutExchangeDifferent(ind):
+    size = len(ind)
+
+    i = random.randint(0, size - 1)
+    j = i
+
+    while j == i or ind[i] == ind[j]:
+        j = random.randint(0, size - 1)
+
+    ind[i], ind[j] = ind[j], ind[i]
+
+    return ind,
 
 def initial_pop(*mtpl):
     """Generate the initial permutation population.
@@ -77,6 +89,7 @@ def initial_pop(*mtpl):
     """
 
     q = [i for (i, j) in enumerate(mtpl) for _ in range(j)]
+
     return [q, q[::-1]]
 
 
@@ -134,10 +147,10 @@ if __name__ == "__main__" or True:
 
     toolbox.register("evaluate", lambda x: eval(output_dir, x))
     toolbox.register("mate", cxGeneralizedOrdered)
-    toolbox.register("mutate", deap.tools.mutShuffleIndexes, indpb=0.2)
-    toolbox.register("select", deap.tools.selTournament, tournsize=3)
+    toolbox.register("mutate", mutExchangeDifferent)
+    toolbox.register("select", deap.tools.selBest)
 
-    population = [deap.creator.Individual(x) for x in initial_pop(8, 8)]
+    population = [deap.creator.Individual(x) for x in initial_pop(4, 4)]
 
     stats = deap.tools.Statistics(key=lambda ind: ind.fitness.values)
 
@@ -149,17 +162,18 @@ if __name__ == "__main__" or True:
     pop, logbook = deap.algorithms.eaMuPlusLambda(
         population,
         toolbox,
+        40,
         100,
-        50,
-        cxpb=0.5,
-        mutpb=0.2,
+        cxpb=0.3,
+        mutpb=0.6,
         ngen=100,
         stats=stats,
         verbose=True,
     )
 
     print()
-    print("Best results:")
+    print("Results:")
+    
 
-    for i in sort(deap.tools.selBest(pop, k=10), key=lambda x: x.fitness.values[0], reverse=True):
-        print("% 12.8f %s" % (i.fitness.values[0], "".join(str(j) for j in i)))
+    for r, i in enumerate(sorted(pop, key=lambda x: x.fitness.values[0], reverse=True)):
+        print("% 4d % 10.4f %s" % (r, i.fitness.values[0], "".join(str(j) for j in i)))
