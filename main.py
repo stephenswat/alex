@@ -9,13 +9,42 @@ import os
 import logging
 import collections
 import itertools
-
+import cachesim
 import deap.creator
 import deap.base
 import deap.tools
 import deap.algorithms
+import yaml
+import enum
+import scoop.futures
+import scoop.shared
 
 logging.basicConfig(level=logging.DEBUG)
+
+class AccessVerb(enum.Enum):
+    LOAD = 0
+    STORE = 1
+
+
+class Data:
+    def __init__(self, sizes, element, addr):
+        self.sizes = sizes
+        self.element = element
+        self.addr = addr
+
+
+class TraceMMijk:
+    def __init__(self, size):
+        self.__size = size
+
+    def accesses(self):
+        for i in range(self.__size):
+            for j in range(self.__size):
+                for k in range(self.__size):
+                    yield (AccessVerb.LOAD, 0, (i, k), 4)
+                    yield (AccessVerb.LOAD, 1073741824, (k, j), 4)
+                yield (AccessVerb.STORE, 2147483648, (i, j), 4)
+
 
 
 def enumerateOccurances(i):
@@ -62,6 +91,7 @@ def cxGeneralizedOrdered(ind1, ind2):
 
     return (ind1, ind2)
 
+
 def mutExchangeDifferent(ind):
     size = len(ind)
 
@@ -73,9 +103,14 @@ def mutExchangeDifferent(ind):
 
     ind[i], ind[j] = ind[j], ind[i]
 
-    return ind,
+    return (ind,)
 
-def initial_pop(*mtpl):
+
+def simulateMMijk(cache, permutation):
+    pass
+
+
+def initialPop(*mtpl):
     """Generate the initial permutation population.
 
     Generate the initial population of our permutations. We generate the two
@@ -93,64 +128,121 @@ def initial_pop(*mtpl):
     return [q, q[::-1]]
 
 
-def eval(root, individual):
-    name = "".join(string.ascii_lowercase[x] for x in individual)
-    dirname = root / name
+def evalFitness(individual):
+    tup = tuple(individual)
 
-    if not os.path.isdir(dirname):
-        os.mkdir(dirname)
+    hierarchy = buildCacheSimulator(scoop.shared.getConst('hierarchy'))
+    trace = scoop.shared.getConst('trace')
 
-    if not os.path.isfile(dirname / "run"):
-        with open(dirname / "output.txt", "w") as f:
-            subprocess.run(
-                [
-                    os.environ.get("CXX", "c++"),
-                    "-O2",
-                    "-march=x86-64-v3",
-                    "-mtune=generic",
-                    "-std=c++17",
-                    "-DNDEBUG",
-                    "-DPERMUTATION=%s" % ",".join(str(x) for x in individual),
-                    "-o",
-                    dirname / "run",
-                    pathlib.Path(os.path.dirname(os.path.realpath(__file__)))
-                    / "benchmark"
-                    / "main.cpp",
-                ],
-                check=True,
-                stdout=f,
-                stderr=f,
-            )
+    accesses = 0
 
-    p = subprocess.run(
-        [
-            dirname / "run",
-        ],
-        check=True,
-        capture_output=True,
+
+    for (v, b, a, s) in trace.accesses():
+        accesses += 1
+
+        index = 0
+
+        addr = b + s * index
+
+        if v == AccessVerb.LOAD:
+            hierarchy.load(addr, s)
+        elif v == AccessVerb.STORE:
+            hierarchy.store(addr, s)
+
+    hierarchy.force_write_back()
+
+    cycles = 0
+
+    for x in hierarchy.levels():
+        cycles += x.stats()["HIT_count"] * x.latency
+
+    return (accesses / cycles,)
+
+
+def parseBits(s):
+    return [int(x) for x in s.split(":")]
+
+
+def buildCacheSimulator(h):
+    caches = {}
+    memory = cachesim.MainMemory()
+
+    setattr(memory, "latency", h["memory"]["latency"])
+
+    for n, d in h["caches"].items():
+        caches[n] = cachesim.Cache(
+            n,
+            d["sets"],
+            d["ways"],
+            d["line"],
+            replacement_policy=d.get("replacement", "LRU"),
+            write_back=d.get("write_back", True),
+            write_allocate=d.get("write_allocate", True),
+            write_combining=d.get("write_combining", False),
+        )
+
+        setattr(caches[n], "latency", d["latency"])
+
+    for n, d in h["caches"].items():
+        if "store_to" in d:
+            caches[n].set_store_to(caches[d["store_to"]])
+
+        if "load_from" in d:
+            caches[n].set_load_from(caches[d["load_from"]])
+
+        if "victims_to" in d:
+            caches[n].set_victim_to(caches[d["victims_to"]])
+
+
+    memory.load_to(caches[h["memory"]["last"]])
+    memory.store_from(caches[h["memory"]["last"]])
+
+    return cachesim.CacheSimulator(caches[h["memory"]["first"]], memory)
+
+
+deap.creator.create("FitnessMax", deap.base.Fitness, weights=(1.0,))
+deap.creator.create("Individual", list, fitness=deap.creator.FitnessMax)
+
+toolbox = deap.base.Toolbox()
+toolbox.register("evaluate", evalFitness)
+toolbox.register("mate", cxGeneralizedOrdered)
+toolbox.register("mutate", mutExchangeDifferent)
+toolbox.register("select", deap.tools.selBest)
+toolbox.register("map", scoop.futures.map)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-c",
+        "--cache",
+        type=pathlib.Path,
+        help="cache hierarchy YAML file to load",
+        required=True,
+    )
+    parser.add_argument(
+        "-b",
+        "--bits",
+        type=parseBits,
+        help="colon-separated bit counts",
+        required=True,
+    )
+    parser.add_argument(
+        "-t",
+        "--trace",
+        type=str,
+        help="trace type to use",
+        required=True,
     )
 
-    t = float(p.stdout)
+    args = parser.parse_args()
 
-    return (t,)
+    with open(args.cache, "r") as f:
+        scoop.shared.setConst(hierarchy=yaml.safe_load(f))
 
+    scoop.shared.setConst(trace=TraceMMijk(2**args.bits[0]))
 
-if __name__ == "__main__" or True:
-    output_dir = pathlib.Path(tempfile.mkdtemp())
-
-    logging.info("Using temporary directory {}".format(output_dir))
-
-    deap.creator.create("FitnessMax", deap.base.Fitness, weights=(1.0,))
-    deap.creator.create("Individual", list, fitness=deap.creator.FitnessMax)
-
-    toolbox = deap.base.Toolbox()
-
-    toolbox.register("evaluate", lambda x: eval(output_dir, x))
-    toolbox.register("mate", cxGeneralizedOrdered)
-    toolbox.register("mutate", mutExchangeDifferent)
-    toolbox.register("select", deap.tools.selBest)
-
-    population = [deap.creator.Individual(x) for x in initial_pop(4, 4)]
+    population = [deap.creator.Individual(x) for x in initialPop(*args.bits)]
 
     stats = deap.tools.Statistics(key=lambda ind: ind.fitness.values)
 
@@ -173,7 +265,6 @@ if __name__ == "__main__" or True:
 
     print()
     print("Results:")
-    
 
     for r, i in enumerate(sorted(pop, key=lambda x: x.fitness.values[0], reverse=True)):
         print("% 4d % 10.4f %s" % (r, i.fitness.values[0], "".join(str(j) for j in i)))
