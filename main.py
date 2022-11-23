@@ -18,8 +18,10 @@ import yaml
 import enum
 import scoop.futures
 import scoop.shared
-
-logging.basicConfig(level=logging.DEBUG)
+import csv
+import scoop
+import functools
+import operator
 
 class AccessVerb(enum.Enum):
     LOAD = 0
@@ -34,16 +36,17 @@ class Data:
 
 
 class TraceMMijk:
-    def __init__(self, size):
+    def __init__(self, size, element_size=4):
         self.__size = size
+        self.__element_size=element_size
 
     def accesses(self):
         for i in range(self.__size):
             for j in range(self.__size):
                 for k in range(self.__size):
-                    yield (AccessVerb.LOAD, 0, (i, k), 4)
-                    yield (AccessVerb.LOAD, 1073741824, (k, j), 4)
-                yield (AccessVerb.STORE, 2147483648, (i, j), 4)
+                    yield (AccessVerb.LOAD, 0, (i, k), self.__element_size)
+                    yield (AccessVerb.LOAD, 1073741824, (k, j), self.__element_size)
+                yield (AccessVerb.STORE, 2147483648, (i, j), self.__element_size)
 
 
 
@@ -128,6 +131,10 @@ def initialPop(*mtpl):
     return [q, q[::-1]]
 
 
+def getIndex(permutation, *idxs):
+    return functools.reduce(lambda a, b: 2 * a | ((idxs[b[0]] >> b[1]) % 2), enumerateOccurances(permutation), 0)
+
+
 def evalFitness(individual):
     tup = tuple(individual)
 
@@ -140,9 +147,7 @@ def evalFitness(individual):
     for (v, b, a, s) in trace.accesses():
         accesses += 1
 
-        index = 0
-
-        addr = b + s * index
+        addr = b + s * getIndex(individual, *a)
 
         if v == AccessVerb.LOAD:
             hierarchy.load(addr, s)
@@ -150,6 +155,8 @@ def evalFitness(individual):
             hierarchy.store(addr, s)
 
     hierarchy.force_write_back()
+
+    hierarchy.print_stats()
 
     cycles = 0
 
@@ -234,6 +241,25 @@ if __name__ == "__main__":
         help="trace type to use",
         required=True,
     )
+    parser.add_argument(
+        "-l",
+        "--logbook",
+        type=pathlib.Path,
+        help="output CSV for logbook",
+    )
+    parser.add_argument(
+        "-r",
+        "--ranking",
+        type=pathlib.Path,
+        help="output CSV for final population",
+    )
+    parser.add_argument(
+        "-g",
+        "--generations",
+        type=int,
+        help="number of generations",
+        default=10
+    )
 
     args = parser.parse_args()
 
@@ -258,13 +284,32 @@ if __name__ == "__main__":
         100,
         cxpb=0.3,
         mutpb=0.6,
-        ngen=100,
+        ngen=args.generations,
         stats=stats,
-        verbose=True,
+        verbose=False,
     )
 
-    print()
-    print("Results:")
+    ranking = sorted(pop, key=lambda x: x.fitness.values[0], reverse=True)
 
-    for r, i in enumerate(sorted(pop, key=lambda x: x.fitness.values[0], reverse=True)):
-        print("% 4d % 10.4f %s" % (r, i.fitness.values[0], "".join(str(j) for j in i)))
+    if args.logbook is not None:
+        with open(args.logbook, "w") as f:
+            w = csv.DictWriter(f, ["gen", "nevals", "avg", "std", "min", "max"])
+
+            w.writeheader()
+
+            for l in logbook:
+                w.writerow(l)
+
+    if args.ranking is not None:
+        with open(args.ranking, "w") as f:
+            w = csv.DictWriter(f, ["permutation", "throughput"])
+
+            w.writeheader()
+
+            for r in ranking:
+                w.writerow({"permutation": "".join(str(j) for j in r), "throughput": r.fitness.values[0]})
+
+    scoop.logger.info("Processing complete; final ranking:")
+
+    for r, i in enumerate(ranking):
+        scoop.logger.info("% 4d % 10.4f %s" % (r, i.fitness.values[0], "".join(str(j) for j in i)))
