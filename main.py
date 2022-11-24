@@ -295,7 +295,7 @@ if __name__ == "__main__":
         mutpb=0.6,
         ngen=args.generations,
         stats=stats,
-        verbose=False,
+        verbose=True,
     )
 
     ranking = sorted(pop, key=lambda x: x.fitness.values[0], reverse=True)
