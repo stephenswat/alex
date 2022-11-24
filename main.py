@@ -49,7 +49,6 @@ class TraceMMijk:
                 yield (AccessVerb.STORE, 2147483648, (i, j), self.__element_size)
 
 
-
 def enumerateOccurances(i):
     c = collections.defaultdict(int)
     r = []
@@ -156,8 +155,6 @@ def evalFitness(individual):
 
     hierarchy.force_write_back()
 
-    hierarchy.print_stats()
-
     cycles = 0
 
     for x in hierarchy.levels():
@@ -168,6 +165,18 @@ def evalFitness(individual):
 
 def parseBits(s):
     return [int(x) for x in s.split(":")]
+
+CACHE = {}
+
+def cachingMap(func, iterable):
+    todo = list({tuple(i) for i in iterable if tuple(i) not in CACHE})
+
+    res = scoop.futures.map(func, todo)
+
+    for (i, j) in zip(todo, res):
+        CACHE[tuple(i)] = j
+
+    return [CACHE[tuple(i)] for i in iterable]
 
 
 def buildCacheSimulator(h):
@@ -215,7 +224,7 @@ toolbox.register("evaluate", evalFitness)
 toolbox.register("mate", cxGeneralizedOrdered)
 toolbox.register("mutate", mutExchangeDifferent)
 toolbox.register("select", deap.tools.selBest)
-toolbox.register("map", scoop.futures.map)
+toolbox.register("map", cachingMap)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -312,4 +321,4 @@ if __name__ == "__main__":
     scoop.logger.info("Processing complete; final ranking:")
 
     for r, i in enumerate(ranking):
-        scoop.logger.info("% 4d % 10.4f %s" % (r, i.fitness.values[0], "".join(str(j) for j in i)))
+        scoop.logger.info("% 4d % 12.7f %s" % (r, i.fitness.values[0], "".join(str(j) for j in i)))
