@@ -22,6 +22,9 @@ import csv
 import scoop
 import functools
 import operator
+import numba
+import numpy
+
 
 class AccessVerb(enum.Enum):
     LOAD = 0
@@ -38,7 +41,7 @@ class Data:
 class TraceMMijk:
     def __init__(self, size, element_size=4):
         self.__size = size
-        self.__element_size=element_size
+        self.__element_size = element_size
 
     def accesses(self):
         for i in range(self.__size):
@@ -127,26 +130,34 @@ def initialPop(*mtpl):
 
     q = [i for (i, j) in enumerate(mtpl) for _ in range(j)]
 
-    return [q, q[::-1]]
+    return [numpy.array(q), numpy.array(q[::-1])]
 
 
-def getIndex(permutation, *idxs):
-    return functools.reduce(lambda a, b: 2 * a | ((idxs[b[0]] >> b[1]) % 2), enumerateOccurances(permutation), 0)
+@numba.njit
+def getIndex(permutation, m, idxs):
+    idx = 0
+    jdx = numpy.zeros((m,), dtype=numba.int64)
+
+    for i in range(permutation.shape[0]):
+        dig = permutation[i]
+        idx |= ((idxs[dig] >> jdx[dig]) % 2) << i
+        jdx[dig] += 1
+
+    return idx
 
 
 def evalFitness(individual):
     tup = tuple(individual)
 
-    hierarchy = buildCacheSimulator(scoop.shared.getConst('hierarchy'))
-    trace = scoop.shared.getConst('trace')
+    hierarchy = buildCacheSimulator(scoop.shared.getConst("hierarchy"))
+    trace = scoop.shared.getConst("trace")
 
     accesses = 0
-
 
     for (v, b, a, s) in trace.accesses():
         accesses += 1
 
-        addr = b + s * getIndex(individual, *a)
+        addr = b + s * getIndex(individual, 2, a)
 
         if v == AccessVerb.LOAD:
             hierarchy.load(addr, s)
@@ -166,10 +177,16 @@ def evalFitness(individual):
 def parseBits(s):
     return [int(x) for x in s.split(":")]
 
+
 CACHE = {}
 
+
 def cachingMap(func, iterable):
-    todo = list({tuple(i) for i in iterable if tuple(i) not in CACHE})
+    todo = []
+
+    for i in iterable:
+        if tuple(i) not in CACHE and not any(numpy.array_equal(i, x) for x in todo):
+            todo.append(i)
 
     res = scoop.futures.map(func, todo)
 
@@ -209,7 +226,6 @@ def buildCacheSimulator(h):
         if "victims_to" in d:
             caches[n].set_victim_to(caches[d["victims_to"]])
 
-
     memory.load_to(caches[h["memory"]["last"]])
     memory.store_from(caches[h["memory"]["last"]])
 
@@ -217,7 +233,7 @@ def buildCacheSimulator(h):
 
 
 deap.creator.create("FitnessMax", deap.base.Fitness, weights=(1.0,))
-deap.creator.create("Individual", list, fitness=deap.creator.FitnessMax)
+deap.creator.create("Individual", numpy.ndarray, fitness=deap.creator.FitnessMax)
 
 toolbox = deap.base.Toolbox()
 toolbox.register("evaluate", evalFitness)
@@ -263,11 +279,7 @@ if __name__ == "__main__":
         help="output CSV for final population",
     )
     parser.add_argument(
-        "-g",
-        "--generations",
-        type=int,
-        help="number of generations",
-        default=10
+        "-g", "--generations", type=int, help="number of generations", default=10
     )
 
     args = parser.parse_args()
@@ -275,7 +287,7 @@ if __name__ == "__main__":
     with open(args.cache, "r") as f:
         scoop.shared.setConst(hierarchy=yaml.safe_load(f))
 
-    scoop.shared.setConst(trace=TraceMMijk(2**args.bits[0]))
+    scoop.shared.setConst(trace=TraceMMijk(2 ** args.bits[0]))
 
     population = [deap.creator.Individual(x) for x in initialPop(*args.bits)]
 
@@ -316,9 +328,16 @@ if __name__ == "__main__":
             w.writeheader()
 
             for r in ranking:
-                w.writerow({"permutation": "".join(str(j) for j in r), "throughput": r.fitness.values[0]})
+                w.writerow(
+                    {
+                        "permutation": "".join(str(j) for j in r),
+                        "throughput": r.fitness.values[0],
+                    }
+                )
 
     scoop.logger.info("Processing complete; final ranking:")
 
     for r, i in enumerate(ranking):
-        scoop.logger.info("% 4d % 12.7f %s" % (r, i.fitness.values[0], "".join(str(j) for j in i)))
+        scoop.logger.info(
+            "% 4d % 12.7f %s" % (r, i.fitness.values[0], "".join(str(j) for j in i))
+        )

@@ -1,19 +1,18 @@
 import unittest
+from main import getIndex
+import numpy
 
-class TestStringMethods(unittest.TestCase):
-    def test_upper(self):
-        self.assertEqual('foo'.upper(), 'FOO')
 
-    def test_isupper(self):
-        self.assertTrue('FOO'.isupper())
-        self.assertFalse('Foo'.isupper())
+class TestGetIndex(unittest.TestCase):
+    def test(self):
+        self.assertEqual(getIndex(numpy.array([0, 1, 0, 1, 0, 1]), 2, (3, 5)), 39)
+        self.assertEqual(
+            getIndex(numpy.array([0, 1, 2, 0, 1, 2, 0, 1, 2]), 3, (4, 3, 5)), 342
+        )
+        self.assertEqual(
+            getIndex(numpy.array([2, 2, 0, 1, 1, 2, 0, 1, 0]), 3, (4, 3, 5)), 313
+        )
 
-    def test_split(self):
-        s = 'hello world'
-        self.assertEqual(s.split(), ['hello', 'world'])
-        # check that s.split fails when the separator is not a string
-        with self.assertRaises(TypeError):
-            s.split(2)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
