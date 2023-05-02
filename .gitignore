@@ -5,3 +5,4 @@ dist/
 *.so
 __pycache__/
 *.egg-info/
+*.csv

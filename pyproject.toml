@@ -13,6 +13,8 @@ pybind11 = "2.10.3"
 pyyaml = "^6.0"
 pydantic = "^1.10.7"
 numpy = "^1.24.3"
+rich = "^13.3.5"
+flake8-black = "^0.3.6"
 
 [tool.poetry.group.dev.dependencies]
 black = "*"

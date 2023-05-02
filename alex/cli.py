@@ -1,18 +1,21 @@
 import argparse
 import collections
 import concurrent.futures
-import csv
-import os
+import enum
+import hashlib
+import logging
 import pathlib
 import random
-import time
 
+import rich.logging
 import yaml
 
 import alex.ga
 import alex.pattern
 import alex.schema
 import alex.simulator
+
+log = logging.getLogger(__name__)
 
 
 def enumerateOccurances(i):
@@ -101,7 +104,15 @@ def evalFitness(individual, hierarchy):
     for x in simulator._sim.levels():
         cycles += x.stats()["HIT_count"] * x.latency
 
-    return accesses / cycles
+    return (simulator._sim.first_level.latency * accesses) / cycles
+
+
+class Trace(str, enum.Enum):
+    MMijk = "MMijk"
+    MMikj = "MMikj"
+
+    def __str__(self):
+        return self.value
 
 
 def parseBits(s):
@@ -128,52 +139,126 @@ def main():
     parser.add_argument(
         "-t",
         "--trace",
-        type=str,
+        type=Trace,
+        choices=list(Trace),
         help="trace type to use",
         required=True,
-    )
-    parser.add_argument(
-        "-r",
-        "--ranking",
-        type=pathlib.Path,
-        help="output CSV for final population",
     )
     parser.add_argument(
         "-g", "--generations", type=int, help="number of generations", default=10
     )
     parser.add_argument("-j", "--parallel", type=int, nargs="?", const=-1)
+    parser.add_argument(
+        "-l", "--log", type=pathlib.Path, help="CSV file to write the log data to"
+    )
+    parser.add_argument(
+        "-r",
+        "--ranking",
+        type=pathlib.Path,
+        help="CSV file to write the species data to",
+    )
+    parser.add_argument(
+        "-v", "--verbose", help="enable verbose output", action="store_true"
+    )
 
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.DEBUG if (args.verbose or False) else logging.INFO,
+        format="%(message)s",
+        handlers=[
+            rich.logging.RichHandler(
+                show_path=False, omit_repeated_times=False, markup=True
+            )
+        ],
+    )
+
+    log.info(
+        "Access pattern is %s with dimension %s",
+        args.trace,
+        "x".join(str(i) for i in args.bits),
+    )
+
+    log.info("Reading cache configuration from [magenta]%s[/]", args.cache)
+
+    log.info(
+        "Cache configuration MD5 sum is [green]%s[/]",
+        hashlib.md5(open(args.cache, "rb").read()).hexdigest(),
+    )
 
     with open(args.cache, "r") as f:
         hierarchy = alex.schema.CacheHierarchy(**yaml.safe_load(f))
 
+    genetic_parameters = {
+        "retained_count": 20,
+        "generated_count": 30,
+        "elite_count": 5,
+    }
+
+    log.info(
+        "Genetic parameters:\n"
+        + "\n".join(
+            "[yellow]%s[/]: %s" % (str(k), str(v))
+            for k, v in genetic_parameters.items()
+        )
+    )
+
     ga = alex.ga.GA(
-        generations=args.generations,
         initial_population=initialPop(*args.bits),
         mutation_func=mutExchangeDifferent,
         crossover_func=cxGeneralizedOrdered,
         fitness_func=evalFitness,
         fitness_func_kwargs={"hierarchy": hierarchy},
-        retained_count=20,
-        generated_count=30,
-        elite_count=5,
+        **genetic_parameters,
     )
 
+    log.info("Generation count is %d", args.generations)
+
     if args.parallel is not None:
+        if args.parallel < 0:
+            log.info("Running evolution with automatic process count")
+        else:
+            log.info("Running evolution with %d processes", args.parallel)
+
         with concurrent.futures.ProcessPoolExecutor(
             max_workers=None if args.parallel < 0 else args.parallel
         ) as executor:
-            ga.run(executor)
+            ga.run(generations=args.generations, executor=executor)
     else:
-        ga.run()
+        log.info("Running evolution sequentially")
+        ga.run(generations=args.generations)
 
-    print(len(ga.fitness_cache))
+    log.info("Evolution complete!")
 
-    print("Final pop:")
-    for i, f in sorted(ga.results(), key=lambda t: t[1], reverse=True):
-        print(i, f)
+    log.info(
+        "Final population (top 10):\n"
+        + "\n".join(
+            ",".join(str(x) for x in i) + " : " + str(f)
+            for (i, f) in sorted(ga.results(), key=lambda t: t[1], reverse=True)[:10]
+        )
+    )
 
-    print("\n\nCache:")
-    for i, f in sorted(ga.fitness_cache.items(), key=lambda t: t[1], reverse=True):
-        print(i, f)
+    if args.log is not None:
+        log.info("Writing full log to %s", args.log)
+
+        with open(args.log, "w") as f:
+            ga.write_log(f)
+
+    ranked_cache = sorted(ga.fitness_cache.items(), key=lambda t: t[1], reverse=True)
+
+    log.info(
+        "Cache:\n"
+        + "\n".join(
+            ",".join(str(x) for x in i) + " : " + str(f) for i, f in ranked_cache[:5]
+        )
+        + "\n...\n"
+        + "\n".join(
+            ",".join(str(x) for x in i) + " : " + str(f) for i, f in ranked_cache[-5:]
+        )
+    )
+
+    if args.ranking is not None:
+        log.info("Writing full ranking to %s", args.ranking)
+
+        with open(args.ranking, "w") as f:
+            ga.write_ranking(f)

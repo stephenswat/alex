@@ -1,13 +1,18 @@
+import csv
+import logging
 import random
 import time
 
 import numpy.random
 
+import alex.signal
+
+log = logging.getLogger(__name__)
+
 
 class GA:
     def __init__(
         self,
-        generations,
         retained_count,
         generated_count,
         elite_count,
@@ -17,7 +22,7 @@ class GA:
         initial_population,
         fitness_func_kwargs=None,
     ):
-        self.generations = generations
+        self.generation = 0
         self.retained_count = retained_count
         self.generated_count = generated_count
         self.elite_count = elite_count
@@ -59,48 +64,79 @@ class GA:
 
         fitnesses = [self.get_fitness(x) for x in self.population]
 
-        print(
-            f"Generation {n}, size {len(self.population)}, min {min(fitnesses)}, max {max(fitnesses)}, cache size {len(self.fitness_cache)}, runtime {t2 - t1}s"
+        log.info(
+            f"Generation {n}, size {len(self.population)}, min {min(fitnesses)}, "
+            + f"max {max(fitnesses)}, cache size {len(self.fitness_cache)}, "
+            + f"runtime {t2 - t1} sec"
         )
 
-    def run(self, executor=None):
-        for g in range(self.generations - 1):
-            self.process_generation(g, executor)
+    def run(self, generations=1, executor=None):
+        with alex.signal.CatchSigInt() as s:
+            while self.generation < generations:
+                self.process_generation(self.generation, executor)
 
-            tmp_pop = sorted(
-                list(set(self.population)),
-                key=lambda x: self.get_fitness(x),
-                reverse=True,
-            )
+                if not s.valid():
+                    break
 
-            elite_pop = tmp_pop[: self.elite_count]
-            non_elite_pop = tmp_pop[self.elite_count :]
-
-            non_elite_size = self.retained_count - self.elite_count
-
-            if non_elite_size > 0 and len(non_elite_pop) > 0:
-                total_fitness = sum(self.get_fitness(i) ** 2 for i in non_elite_pop)
-                non_elite_selection = numpy.random.choice(
-                    len(non_elite_pop),
-                    size=min(non_elite_size, len(non_elite_pop)),
-                    replace=False,
-                    p=[self.get_fitness(i) ** 2 / total_fitness for i in non_elite_pop],
+                tmp_pop = sorted(
+                    list(set(self.population)),
+                    key=lambda x: self.get_fitness(x),
+                    reverse=True,
                 )
+
+                elite_pop = tmp_pop[: self.elite_count]
+                non_elite_pop = tmp_pop[self.elite_count :]
+
+                non_elite_size = self.retained_count - self.elite_count
+
+                if non_elite_size > 0 and len(non_elite_pop) > 0:
+                    total_fitness = sum(self.get_fitness(i) ** 2 for i in non_elite_pop)
+                    non_elite_selection = numpy.random.choice(
+                        len(non_elite_pop),
+                        size=min(non_elite_size, len(non_elite_pop)),
+                        replace=False,
+                        p=[
+                            self.get_fitness(i) ** 2 / total_fitness
+                            for i in non_elite_pop
+                        ],
+                    )
+                else:
+                    non_elite_selection = []
+
+                mu = elite_pop + [non_elite_pop[i] for i in non_elite_selection]
+
+                lam = [
+                    self.mutation_func(random.choice(mu))
+                    if random.random() < 0.5
+                    else self.crossover_func(*random.sample(mu, k=2))
+                    for _ in range(self.generated_count)
+                ]
+
+                self.population = mu + lam
+
+                self.generation += 1
             else:
-                non_elite_selection = []
-
-            mu = elite_pop + [non_elite_pop[i] for i in non_elite_selection]
-
-            lam = [
-                self.mutation_func(random.choice(mu))
-                if random.random() < 0.5
-                else self.crossover_func(*random.sample(mu, k=2))
-                for _ in range(self.generated_count)
-            ]
-
-            self.population = mu + lam
-
-        self.process_generation(self.generations, executor)
+                self.process_generation(self.generation, executor)
 
     def results(self):
         return [(i, self.get_fitness(i)) for i in self.population]
+
+    def write_log(self, file):
+        writer = csv.DictWriter(
+            file,
+            fieldnames=[
+                "generation",
+                "size",
+                "min_fitness",
+                "max_fitness",
+                "mean_fitness",
+                "dev_fitness",
+                "species_size",
+                "runtime",
+            ],
+        )
+        writer.writeheader()
+
+    def write_ranking(self, file):
+        writer = csv.DictWriter(file, fieldnames=["individual", "fitness"])
+        writer.writeheader()
