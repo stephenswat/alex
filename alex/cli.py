@@ -7,6 +7,7 @@ import logging
 import pathlib
 import random
 
+import rich.highlighter
 import rich.logging
 import yaml
 
@@ -92,27 +93,28 @@ def initialPop(*mtpl):
     return [tuple(q), tuple(q[::-1])]
 
 
-def evalFitness(individual, hierarchy):
-    simulator = alex.pattern.Jacobi2D(hierarchy, individual)
-    accesses = (
-        simulator._sim.first_level.backend.LOAD_count
-        + simulator._sim.first_level.backend.STORE_count
-    )
-
-    cycles = 0
-
-    for x in simulator._sim.levels():
-        cycles += x.stats()["HIT_count"] * x.latency
-
-    return (simulator._sim.first_level.latency * accesses) / cycles
-
-
 class Trace(str, enum.Enum):
     MMijk = "MMijk"
     MMikj = "MMikj"
+    Jacobi2D = "Jacobi2D"
+    Himeno = "Himeno"
+    Cholesky = "Cholesky"
 
     def __str__(self):
         return self.value
+
+
+def evalFitness(individual, hierarchy: alex.schema.CacheHierarchy, trace: Trace):
+    if trace == Trace.MMijk:
+        simulator = alex.pattern.MMijk(hierarchy, individual)
+    else:
+        raise RuntimeError(f"Pattern {str(trace)} not implemented.")
+
+    l1 = simulator._sim.first_level
+
+    cycles = sum(x.stats()["HIT_count"] * x.latency for x in simulator._sim.levels())
+
+    return (l1.backend.STORE_count + l1.backend.LOAD_count) / cycles
 
 
 def parseBits(s):
@@ -145,11 +147,24 @@ def main():
         required=True,
     )
     parser.add_argument(
-        "-g", "--generations", type=int, help="number of generations", default=10
+        "-g",
+        "--generations",
+        type=int,
+        help="number of generations",
+        default=10,
     )
-    parser.add_argument("-j", "--parallel", type=int, nargs="?", const=-1)
     parser.add_argument(
-        "-l", "--log", type=pathlib.Path, help="CSV file to write the log data to"
+        "-j",
+        "--parallel",
+        type=int,
+        nargs="?",
+        const=-1,
+    )
+    parser.add_argument(
+        "-l",
+        "--log",
+        type=pathlib.Path,
+        help="CSV file to write the log data to",
     )
     parser.add_argument(
         "-r",
@@ -158,7 +173,10 @@ def main():
         help="CSV file to write the species data to",
     )
     parser.add_argument(
-        "-v", "--verbose", help="enable verbose output", action="store_true"
+        "-v",
+        "--verbose",
+        help="enable verbose output",
+        action="store_true",
     )
 
     args = parser.parse_args()
@@ -168,7 +186,10 @@ def main():
         format="%(message)s",
         handlers=[
             rich.logging.RichHandler(
-                show_path=False, omit_repeated_times=False, markup=True
+                show_path=False,
+                omit_repeated_times=False,
+                markup=True,
+                highlighter=rich.highlighter.NullHighlighter(),
             )
         ],
     )
@@ -208,7 +229,7 @@ def main():
         mutation_func=mutExchangeDifferent,
         crossover_func=cxGeneralizedOrdered,
         fitness_func=evalFitness,
-        fitness_func_kwargs={"hierarchy": hierarchy},
+        fitness_func_kwargs={"hierarchy": hierarchy, "trace": args.trace},
         **genetic_parameters,
     )
 

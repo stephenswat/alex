@@ -10,6 +10,7 @@ void jacobi2d(const M & A, M & B)
 {
     auto [m, n] = B.get_size();
 
+    for (std::size_t k = 0; k < 3; ++k) {
     for (std::size_t i = 0; i < m; ++i) {
         for (std::size_t j = 0; j < n; ++j) {
             typename M::value_type v1, v2, v3, v4;
@@ -40,6 +41,7 @@ void jacobi2d(const M & A, M & B)
 
             B.store(i, j, 0.25f * (v1 + v2 + v3 + v4));
         }
+    }
     }
 }
 }

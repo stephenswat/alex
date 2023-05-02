@@ -1,3 +1,4 @@
+import copy
 import csv
 import logging
 import random
@@ -33,6 +34,7 @@ class GA:
         self.mutation_func = mutation_func
 
         self.population = initial_population
+        self.last_population = None
 
     def get_fitness(self, i):
         if i not in self.fitness_cache:
@@ -64,10 +66,40 @@ class GA:
 
         fitnesses = [self.get_fitness(x) for x in self.population]
 
+        dlt = self.last_population is not None
+
+        size = len(self.population)
+
+        if dlt:
+            old_fitnesses = [self.get_fitness(x) for x in self.last_population]
+
         log.info(
-            f"Generation {n}, size {len(self.population)}, min {min(fitnesses)}, "
-            + f"max {max(fitnesses)}, cache size {len(self.fitness_cache)}, "
-            + f"runtime {t2 - t1} sec"
+            f"Generation [bold cyan]{n:5d}[/], "
+            + f"size [bold cyan]{size:5d}[/]"
+            + (
+                f" ([bold cyan]{size - len(self.last_population):+3d}[/])"
+                if dlt
+                else "      "
+            )
+            + ", "
+            + f"min [bold cyan]{min(fitnesses):8.6f}[/]"
+            + (
+                f" ([bold cyan]{min(fitnesses) - min(old_fitnesses):+9.6f}[/])"
+                if dlt
+                else "            "
+            )
+            + ", "
+            + f"max [bold cyan]{max(fitnesses):8.6f}[/]"
+            + (
+                f" ([bold cyan]{max(fitnesses) - max(old_fitnesses):+9.6f}[/])"
+                if dlt
+                else "            "
+            )
+            + ", "
+            + f"records [bold cyan]{len(self.fitness_cache):6d}[/]"
+            + ", "
+            + f"runtime [bold cyan]{t2 - t1:7.3f}[/] sec",
+            extra={"highlight": False},
         )
 
     def run(self, generations=1, executor=None):
@@ -112,6 +144,7 @@ class GA:
                     for _ in range(self.generated_count)
                 ]
 
+                self.last_population = copy.deepcopy(self.population)
                 self.population = mu + lam
 
                 self.generation += 1
