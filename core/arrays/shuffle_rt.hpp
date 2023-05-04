@@ -8,7 +8,7 @@
 #include "utils/pdep.hpp"
 
 namespace alex::arrays {
-template <concepts::pointer T>
+template <std::size_t N, concepts::pointer T>
 class shuffle_rt
 {
 public:
@@ -17,44 +17,59 @@ public:
 
     shuffle_rt(T && _p, const std::vector<std::size_t> & _c)
         : ptr(_p)
-        , m1(utils::get_mask<std::size_t>(_c, 0))
-        , m2(utils::get_mask<std::size_t>(_c, 1))
-        , s1(1UL << utils::get_size(_c, 0))
-        , s2(1UL << utils::get_size(_c, 1))
+        , m(utils::get_masks<N>(_c))
+        , s(utils::get_sizes<N>(_c))
     {
     }
 
-    inline typename T::value_type
-    load(const std::size_t & i, const std::size_t & j) const
+    template <std::unsigned_integral... I>
+    inline typename T::value_type load(const I &... is) const
+    {
+        return load(std::array<std::size_t, N>{is...});
+    }
+
+    inline typename T::value_type load(const std::array<std::size_t, N> & i
+    ) const
     {
         assert(i < s1 && j < s2);
-        return ptr.load(get_index(i, j));
+        return ptr.load(get_index(i));
+    }
+
+    template <std::unsigned_integral... I>
+    inline void store(const typename T::value_type & v, const I &... is)
+    {
+        return store(v, std::array<std::size_t, N>{is...});
     }
 
     inline void store(
-        const std::size_t & i,
-        const std::size_t & j,
-        const typename T::value_type & v
+        const typename T::value_type & v, const std::array<std::size_t, N> & i
     )
     {
-        assert(i < s1 && j < s2);
-        ptr.store(get_index(i, j), v);
+        // assert(i < s1 && j < s2);
+        ptr.store(get_index(i), v);
     }
 
-    std::tuple<std::size_t, std::size_t> get_size() const
+    std::array<std::size_t, N> get_size() const
     {
-        return {s1, s2};
+        return s;
     }
 
 private:
+    template <std::size_t... J>
     inline std::size_t
-    get_index(const std::size_t & i, const std::size_t & j) const
+    get_index_helper(const std::array<std::size_t, N> & i, std::index_sequence<J...>)
+        const
     {
-        return pdep(i, m1) | pdep(j, m2);
+        return (pdep(i[J], m[J]) | ...);
+    }
+
+    template <std::unsigned_integral... I>
+    inline std::size_t get_index(const std::array<std::size_t, N> & i) const
+    {
+        return get_index_helper(i, std::make_index_sequence<N>());
     }
 
     T ptr;
-    std::size_t m1, m2;
-    std::size_t s1, s2;
+    std::array<std::size_t, N> m, s;
 };
 }

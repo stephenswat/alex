@@ -1,7 +1,6 @@
 import argparse
 import collections
 import concurrent.futures
-import enum
 import hashlib
 import logging
 import pathlib
@@ -93,22 +92,10 @@ def initialPop(*mtpl):
     return [tuple(q), tuple(q[::-1])]
 
 
-class Trace(str, enum.Enum):
-    MMijk = "MMijk"
-    MMikj = "MMikj"
-    Jacobi2D = "Jacobi2D"
-    Himeno = "Himeno"
-    Cholesky = "Cholesky"
-
-    def __str__(self):
-        return self.value
-
-
-def evalFitness(individual, hierarchy: alex.schema.CacheHierarchy, trace: Trace):
-    if trace == Trace.MMijk:
-        simulator = alex.pattern.MMijk(hierarchy, individual)
-    else:
-        raise RuntimeError(f"Pattern {str(trace)} not implemented.")
+def evalFitness(
+    individual, hierarchy: alex.schema.CacheHierarchy, pattern: alex.pattern.Pattern
+):
+    simulator = alex.pattern.runPattern(pattern, hierarchy, individual)
 
     l1 = simulator._sim.first_level
 
@@ -140,10 +127,10 @@ def main():
     )
     parser.add_argument(
         "-t",
-        "--trace",
-        type=Trace,
-        choices=list(Trace),
-        help="trace type to use",
+        "--pattern",
+        type=alex.pattern.Pattern,
+        choices=list(alex.pattern.Pattern),
+        help="pattern type to use",
         required=True,
     )
     parser.add_argument(
@@ -196,14 +183,14 @@ def main():
 
     log.info(
         "Access pattern is %s with dimension %s",
-        args.trace,
+        args.pattern,
         "x".join(str(i) for i in args.bits),
     )
 
-    log.info("Reading cache configuration from [magenta]%s[/]", args.cache)
+    log.info("Reading cache configuration from [bold magenta]%s[/]", args.cache)
 
     log.info(
-        "Cache configuration MD5 sum is [green]%s[/]",
+        "Cache configuration MD5 sum is [bold green]%s[/]",
         hashlib.md5(open(args.cache, "rb").read()).hexdigest(),
     )
 
@@ -229,7 +216,7 @@ def main():
         mutation_func=mutExchangeDifferent,
         crossover_func=cxGeneralizedOrdered,
         fitness_func=evalFitness,
-        fitness_func_kwargs={"hierarchy": hierarchy, "trace": args.trace},
+        fitness_func_kwargs={"hierarchy": hierarchy, "pattern": args.pattern},
         **genetic_parameters,
     )
 

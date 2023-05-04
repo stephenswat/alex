@@ -108,6 +108,7 @@ class GA:
                 self.process_generation(self.generation, executor)
 
                 if not s.valid():
+                    log.warning("Stopping evolutionary process due to interrupt")
                     break
 
                 tmp_pop = sorted(
