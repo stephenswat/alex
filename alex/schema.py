@@ -1,4 +1,5 @@
 import enum
+import typing
 
 import pydantic
 
@@ -21,9 +22,9 @@ class Cache(pydantic.BaseModel):
     write_back: bool = True
     write_allocate: bool = True
     write_combining: bool = False
-    store_to: str | None
-    load_from: str | None
-    victims_to: str | None
+    store_to: typing.Optional[str]
+    load_from: typing.Optional[str]
+    victims_to: typing.Optional[str]
     latency: int
 
 
