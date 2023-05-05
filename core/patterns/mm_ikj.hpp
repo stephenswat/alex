@@ -13,7 +13,7 @@ void mm_ikj(const M & A, const M & B, M & C)
     for (std::size_t i = 0; i < m; ++i) {
         for (std::size_t k = 0; k < n; ++k) {
             for (std::size_t j = 0; j < m; ++j) {
-                C.store(C.load(i, j) + A.load(i, k) * B.load(j, k), i, j);
+                C.store(C.load(i, j) + A.load(i, k) * B.load(k, j), i, j);
             }
         }
     }

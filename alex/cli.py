@@ -163,7 +163,7 @@ def main():
         handlers=[alex.logging.LogHandler()],
     )
 
-    log.info("Welcome to ALEX version [bold yellow]%s")
+    log.info("Welcome to ALEX version [bold yellow]%s", alex.__version__)
 
     log.info(
         "Access pattern is [bold yellow]%s[/] with dimension [bold yellow]%s[/]",
