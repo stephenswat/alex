@@ -123,15 +123,12 @@ class GA:
                 non_elite_size = self.retained_count - self.elite_count
 
                 if non_elite_size > 0 and len(non_elite_pop) > 0:
-                    total_fitness = sum(self.get_fitness(i) ** 2 for i in non_elite_pop)
+                    total_fitness = sum(self.get_fitness(i) for i in non_elite_pop)
                     non_elite_selection = numpy.random.choice(
                         len(non_elite_pop),
                         size=min(non_elite_size, len(non_elite_pop)),
                         replace=False,
-                        p=[
-                            self.get_fitness(i) ** 2 / total_fitness
-                            for i in non_elite_pop
-                        ],
+                        p=[self.get_fitness(i) / total_fitness for i in non_elite_pop],
                     )
                 else:
                     non_elite_selection = []

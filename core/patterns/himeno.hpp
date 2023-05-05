@@ -29,7 +29,7 @@ void himeno(
                         (P.load(i + 1, j + 1, k) - P.load(i + 1, j - 1, k) -
                          P.load(i - 1, j + 1, k) + P.load(i - 1, j - 1, k)) +
                     vB[1] *
-                        (P.load(i, j + 1, k + 1) - P.load(i, j - 1, j + 1) -
+                        (P.load(i, j + 1, k + 1) - P.load(i, j - 1, k + 1) -
                          P.load(i, j + 1, k - 1) + P.load(i, j - 1, k - 1)) +
                     vB[2] *
                         (P.load(i + 1, j, k + 1) - P.load(i - 1, j, k + 1) -

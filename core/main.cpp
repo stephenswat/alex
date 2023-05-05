@@ -17,6 +17,9 @@
 #include "patterns/jacobi2d.hpp"
 #include "patterns/mm_ijk.hpp"
 #include "patterns/mm_ikj.hpp"
+#include "patterns/mmt_ijk.hpp"
+#include "patterns/mmt_ikj.hpp"
+#include "patterns/crout.hpp"
 #include "pointers/simulated_pointer.hpp"
 #include "utils/pdep.hpp"
 
@@ -55,6 +58,24 @@ void _MMijk_entry(
 }
 
 template <std::floating_point T>
+void _MMTijk_entry(
+    pybind11::handle obj, const std::vector<std::size_t> & individual
+)
+{
+    Cache & cache = *reinterpret_cast<Cache *>(obj.ptr());
+
+    auto [m, n] = size_getter<2>(individual);
+
+    auto [_A, _B, _C] =
+        alex::pointers::partition<T, T, T>(cache, {m * n, m * n, m * n});
+
+    alex::arrays::shuffle_rt<2, decltype(_A)> A(std::move(_A), individual),
+        B(std::move(_B), individual), C(std::move(_C), individual);
+
+    alex::patterns::mmt_ijk(A, B, C);
+}
+
+template <std::floating_point T>
 void _MMikj_entry(
     pybind11::handle obj, const std::vector<std::size_t> & individual
 )
@@ -70,6 +91,24 @@ void _MMikj_entry(
         B(std::move(_B), individual), C(std::move(_C), individual);
 
     alex::patterns::mm_ikj(A, B, C);
+}
+
+template <std::floating_point T>
+void _MMTikj_entry(
+    pybind11::handle obj, const std::vector<std::size_t> & individual
+)
+{
+    Cache & cache = *reinterpret_cast<Cache *>(obj.ptr());
+
+    auto [m, n] = size_getter<2>(individual);
+
+    auto [_A, _B, _C] =
+        alex::pointers::partition<T, T, T>(cache, {m * n, m * n, m * n});
+
+    alex::arrays::shuffle_rt<2, decltype(_A)> A(std::move(_A), individual),
+        B(std::move(_B), individual), C(std::move(_C), individual);
+
+    alex::patterns::mmt_ikj(A, B, C);
 }
 
 template <std::floating_point T>
@@ -104,6 +143,23 @@ void _Cholesky_entry(
         B(std::move(_B), individual);
 
     alex::patterns::cholesky_banachiewicz(A, B);
+}
+
+template <std::floating_point T>
+void _Crout_entry(
+    pybind11::handle obj, const std::vector<std::size_t> & individual
+)
+{
+    Cache & cache = *reinterpret_cast<Cache *>(obj.ptr());
+
+    auto [m, n] = size_getter<2>(individual);
+
+    auto [_A, _B, _C] = alex::pointers::partition<T, T, T>(cache, {m * n, m * n, m * n});
+
+    alex::arrays::shuffle_rt<2, decltype(_A)> A(std::move(_A), individual),
+        B(std::move(_B), individual), C(std::move(_C), individual);
+
+    alex::patterns::crout(A, B, C);
 }
 
 template <std::floating_point T>
@@ -153,7 +209,10 @@ PYBIND11_MODULE(__alex_core, m)
 {
     REGISTER(MMijk);
     REGISTER(MMikj);
+    REGISTER(MMTijk);
+    REGISTER(MMTikj);
     REGISTER(Jacobi2D);
     REGISTER(Cholesky);
     REGISTER(Himeno);
+    REGISTER(Crout);
 }

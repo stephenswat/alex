@@ -14,27 +14,17 @@ import alex.ga
 import alex.pattern
 import alex.schema
 import alex.simulator
+import alex.utils
 
 log = logging.getLogger(__name__)
-
-
-def enumerateOccurances(i):
-    c = collections.defaultdict(int)
-    r = []
-
-    for x in i:
-        r.append((x, c[x]))
-        c[x] += 1
-
-    return r
 
 
 def cxGeneralizedOrdered(ind1, ind2):
     idx = random.randint(0, len(ind1))
     num = random.randint(1, len(ind1) // 2)
 
-    e1 = enumerateOccurances(ind1)
-    e2 = enumerateOccurances(ind2)
+    e1 = alex.utils.enumerateOccurances(ind1)
+    e2 = alex.utils.enumerateOccurances(ind2)
 
     p = (e2 + e2)[idx : idx + num]
 
@@ -50,26 +40,22 @@ def cxGeneralizedOrdered(ind1, ind2):
 
     nind = tuple(r)
 
-    # assert(nind != ind1 and nind != ind2)
-
     return nind
+
+
+def rotateHelper(lst, n):
+    return lst[n:] + lst[:n]
 
 
 def mutExchangeDifferent(ind):
     size = len(ind)
 
-    nind = list(ind)
+    i = random.randint(0, size - 3)
+    j = random.randint(i + 1, size - 1)
 
-    while True:
-        i = random.randint(0, size - 1)
-        j = random.randint(0, size - 1)
+    nind = tuple(ind[:i] + rotateHelper(ind[i:j], 1) + ind[j:])
 
-        if nind[i] != nind[j]:
-            break
-
-    nind[i], nind[j] = nind[j], nind[i]
-
-    assert tuple(nind) != ind
+    # assert tuple(nind) != ind
 
     return tuple(nind)
 
@@ -198,9 +184,9 @@ def main():
         hierarchy = alex.schema.CacheHierarchy(**yaml.safe_load(f))
 
     genetic_parameters = {
-        "retained_count": 20,
-        "generated_count": 30,
-        "elite_count": 5,
+        "retained_count": 5,
+        "generated_count": 10,
+        "elite_count": 2,
     }
 
     log.info(

@@ -6,7 +6,7 @@
 
 namespace alex::patterns {
 template <concepts::array<2> M>
-void mm_ikj(const M & A, const M & B, M & C)
+void mmt_ikj(const M & A, const M & B, M & C)
 {
     auto [m, n] = C.get_size();
 
