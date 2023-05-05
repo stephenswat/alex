@@ -1,5 +1,6 @@
 import logging
 import signal
+import sys
 
 log = logging.getLogger(__name__)
 
@@ -10,8 +11,15 @@ class CatchSigInt:
         self.triggered = False
 
     def _handle_interrupt(self, *_):
-        log.warning("SIGINT received!")
-        self.triggered = True
+        if not self.triggered:
+            log.warning(
+                "SIGINT received! Waiting for current work to finish. "
+                "Interrupt again to exit immediately."
+            )
+            self.triggered = True
+        else:
+            log.fatal("Second SIGINT received! Exiting immediately.")
+            sys.exit(15)
 
     def __enter__(self):
         log.debug("Enabling SIGINT handler")

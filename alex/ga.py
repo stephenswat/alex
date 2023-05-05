@@ -1,14 +1,30 @@
-import copy
+import collections
 import csv
 import logging
 import random
 import time
 
+import numpy
 import numpy.random
 
 import alex.signal
 
 log = logging.getLogger(__name__)
+
+
+GenerationRecord = collections.namedtuple(
+    "GenerationRecord",
+    [
+        "generation",
+        "size",
+        "min_fitness",
+        "max_fitness",
+        "mean_fitness",
+        "dev_fitness",
+        "species_size",
+        "runtime",
+    ],
+)
 
 
 class GA:
@@ -32,9 +48,9 @@ class GA:
         self.fitness_func_kwargs = fitness_func_kwargs or dict()
         self.crossover_func = crossover_func
         self.mutation_func = mutation_func
+        self.generation_log = []
 
         self.population = initial_population
-        self.last_population = None
 
     def get_fitness(self, i):
         if i not in self.fitness_cache:
@@ -66,37 +82,45 @@ class GA:
 
         fitnesses = [self.get_fitness(x) for x in self.population]
 
-        dlt = self.last_population is not None
+        dlt = self.generation > 0
 
         size = len(self.population)
 
+        self.generation_log.append(
+            GenerationRecord(
+                generation=self.generation,
+                size=size,
+                min_fitness=numpy.min(fitnesses),
+                max_fitness=numpy.max(fitnesses),
+                mean_fitness=numpy.mean(fitnesses),
+                dev_fitness=numpy.std(fitnesses),
+                species_size=len(self.fitness_cache),
+                runtime=t2 - t1,
+            )
+        )
+
+        tg = self.generation_log[-1]
         if dlt:
-            old_fitnesses = [self.get_fitness(x) for x in self.last_population]
+            lg = self.generation_log[-2]
+
+        dlt_size = tg.size - lg.size if dlt else tg.size
+        dlt_min = tg.min_fitness - lg.min_fitness if dlt else tg.min_fitness
+        dlt_max = tg.max_fitness - lg.max_fitness if dlt else tg.max_fitness
+        dlt_spc = tg.species_size - lg.species_size if dlt else tg.species_size
 
         log.info(
             f"Generation [bold cyan]{n:5d}[/], "
-            + f"size [bold cyan]{size:5d}[/]"
-            + (
-                f" ([bold cyan]{size - len(self.last_population):+3d}[/])"
-                if dlt
-                else "      "
-            )
+            + f"size [bold cyan]{tg.size:5d}[/]"
+            + f" ([bold cyan]{dlt_size:+3d}[/])"
             + ", "
-            + f"min [bold cyan]{min(fitnesses):8.6f}[/]"
-            + (
-                f" ([bold cyan]{min(fitnesses) - min(old_fitnesses):+9.6f}[/])"
-                if dlt
-                else "            "
-            )
+            + f"min [bold cyan]{tg.min_fitness:8.6f}[/]"
+            + f" ([bold cyan]{dlt_min:+9.6f}[/])"
             + ", "
-            + f"max [bold cyan]{max(fitnesses):8.6f}[/]"
-            + (
-                f" ([bold cyan]{max(fitnesses) - max(old_fitnesses):+9.6f}[/])"
-                if dlt
-                else "            "
-            )
+            + f"max [bold cyan]{tg.max_fitness:8.6f}[/]"
+            + f" ([bold cyan]{dlt_max:+9.6f}[/])"
             + ", "
-            + f"records [bold cyan]{len(self.fitness_cache):6d}[/]"
+            + f"records [bold cyan]{tg.species_size:6d}[/]"
+            + f" ([bold cyan]{dlt_spc:+3d}[/])"
             + ", "
             + f"runtime [bold cyan]{t2 - t1:7.3f}[/] sec",
             extra={"highlight": False},
@@ -104,7 +128,7 @@ class GA:
 
     def run(self, generations=1, executor=None):
         with alex.signal.CatchSigInt() as s:
-            while self.generation < generations:
+            for _ in range(generations - 1):
                 self.process_generation(self.generation, executor)
 
                 if not s.valid():
@@ -142,7 +166,6 @@ class GA:
                     for _ in range(self.generated_count)
                 ]
 
-                self.last_population = copy.deepcopy(self.population)
                 self.population = mu + lam
 
                 self.generation += 1
@@ -168,6 +191,14 @@ class GA:
         )
         writer.writeheader()
 
+        for i in self.generation_log:
+            writer.writerow(i._asdict())
+
     def write_ranking(self, file):
         writer = csv.DictWriter(file, fieldnames=["individual", "fitness"])
         writer.writeheader()
+
+        for i, v in sorted(
+            self.fitness_cache.items(), key=lambda x: x[1], reverse=True
+        ):
+            writer.writerow({"individual": ",".join(str(x) for x in i), "fitness": v})

@@ -3,14 +3,15 @@ import collections
 import concurrent.futures
 import hashlib
 import logging
+import math
 import pathlib
 import random
 
-import rich.highlighter
-import rich.logging
 import yaml
 
+import alex
 import alex.ga
+import alex.logging
 import alex.pattern
 import alex.schema
 import alex.simulator
@@ -154,23 +155,20 @@ def main():
 
     args = parser.parse_args()
 
+    assert args.generations > 0
+
     logging.basicConfig(
         level=logging.DEBUG if (args.verbose or False) else logging.INFO,
         format="%(message)s",
-        handlers=[
-            rich.logging.RichHandler(
-                show_path=False,
-                omit_repeated_times=False,
-                markup=True,
-                highlighter=rich.highlighter.NullHighlighter(),
-            )
-        ],
+        handlers=[alex.logging.LogHandler()],
     )
 
+    log.info("Welcome to ALEX version [bold yellow]%s")
+
     log.info(
-        "Access pattern is %s with dimension %s",
+        "Access pattern is [bold yellow]%s[/] with dimension [bold yellow]%s[/]",
         args.pattern,
-        "x".join(str(i) for i in args.bits),
+        ":".join(str(i) for i in args.bits),
     )
 
     log.info("Reading cache configuration from [bold magenta]%s[/]", args.cache)
@@ -190,8 +188,8 @@ def main():
     }
 
     log.info(
-        "Genetic parameters:\n"
-        + "\n".join(
+        "Genetic parameters: "
+        + ", ".join(
             "[yellow]%s[/]: %s" % (str(k), str(v))
             for k, v in genetic_parameters.items()
         )
@@ -206,13 +204,21 @@ def main():
         **genetic_parameters,
     )
 
-    log.info("Generation count is %d", args.generations)
+    log.info("Generation count is [bold yellow]%d[/]", args.generations)
+
+    log.info(
+        "Total solution space has size [bold cyan]%d[/]",
+        math.factorial(sum(args.bits))
+        / math.prod(math.factorial(i) for i in args.bits),
+    )
 
     if args.parallel is not None:
         if args.parallel < 0:
             log.info("Running evolution with automatic process count")
         else:
-            log.info("Running evolution with %d processes", args.parallel)
+            log.info(
+                "Running evolution with [bold yellow]%d[/] processes", args.parallel
+            )
 
         with concurrent.futures.ProcessPoolExecutor(
             max_workers=None if args.parallel < 0 else args.parallel
@@ -224,16 +230,19 @@ def main():
 
     log.info("Evolution complete!")
 
+    ranked_results = sorted(ga.results(), key=lambda t: t[1], reverse=True)
+
     log.info(
-        "Final population (top 10):\n"
-        + "\n".join(
-            ",".join(str(x) for x in i) + " : " + str(f)
-            for (i, f) in sorted(ga.results(), key=lambda t: t[1], reverse=True)[:10]
-        )
+        f"Final population contains [bold cyan]{len(ranked_results)}[/] individuals"
+    )
+
+    log.info(
+        f"Fittest is [bold blue]{','.join(str(i) for i in ranked_results[0][0])}[/] "
+        + f"([bold cyan]{ranked_results[0][1]}[/])"
     )
 
     if args.log is not None:
-        log.info("Writing full log to %s", args.log)
+        log.info("Writing full log to [bold magenta]%s[/]", args.log)
 
         with open(args.log, "w") as f:
             ga.write_log(f)
@@ -241,18 +250,11 @@ def main():
     ranked_cache = sorted(ga.fitness_cache.items(), key=lambda t: t[1], reverse=True)
 
     log.info(
-        "Cache:\n"
-        + "\n".join(
-            ",".join(str(x) for x in i) + " : " + str(f) for i, f in ranked_cache[:5]
-        )
-        + "\n...\n"
-        + "\n".join(
-            ",".join(str(x) for x in i) + " : " + str(f) for i, f in ranked_cache[-5:]
-        )
+        f"Species contains a total of [bold cyan]{len(ranked_cache)}[/] individuals"
     )
 
     if args.ranking is not None:
-        log.info("Writing full ranking to %s", args.ranking)
+        log.info("Writing full ranking to [bold magenta]%s[/]", args.ranking)
 
         with open(args.ranking, "w") as f:
             ga.write_ranking(f)
