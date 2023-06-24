@@ -18,7 +18,7 @@ def build(setup_kwargs: Dict[str, Any]) -> None:
             runtime_library_dirs=[str(cachesim_backend_file.parent)],
             libraries=[f":{cachesim_backend_file.name}"],
             cxx_std=20,
-            extra_compile_args=["-Wall", "-Wextra", "-Werror", "-mbmi2"],
+            extra_compile_args=["-Wall", "-Wextra", "-Werror", "-mbmi2", "-DNDEBUG"],
             depends=glob.glob("core/**/*.hpp", recursive=True),
         ),
     ]

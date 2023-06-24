@@ -18,7 +18,7 @@ public:
     {
     }
 
-    T load(const std::size_t & i) const
+    inline T load(const std::size_t & i) const
     {
         Cache__load(
             &cache, {static_cast<long int>(begin + i * sizeof(T)), sizeof(T)}
@@ -27,7 +27,7 @@ public:
         return T();
     }
 
-    void store(const std::size_t & i, const T &)
+    inline void store(const std::size_t & i, const T &)
     {
         Cache__store(
             &cache, {static_cast<long int>(begin + i * sizeof(T)), sizeof(T)}, 0

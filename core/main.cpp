@@ -1,6 +1,7 @@
 #define PYBIND11_DETAILED_ERROR_MESSAGES
 
 #include <array>
+#include <chrono>
 #include <concepts>
 #include <iostream>
 #include <type_traits>
@@ -13,14 +14,15 @@
 #include "arrays/shuffle_rt.hpp"
 #include "cachesim.hpp"
 #include "patterns/cholesky_banachiewicz.hpp"
+#include "patterns/crout.hpp"
 #include "patterns/himeno.hpp"
 #include "patterns/jacobi2d.hpp"
 #include "patterns/mm_ijk.hpp"
 #include "patterns/mm_ikj.hpp"
 #include "patterns/mmt_ijk.hpp"
 #include "patterns/mmt_ikj.hpp"
-#include "patterns/crout.hpp"
 #include "pointers/simulated_pointer.hpp"
+#include "pointers/true_pointer.hpp"
 #include "utils/pdep.hpp"
 
 template <std::size_t N>
@@ -40,7 +42,7 @@ std::array<std::size_t, N> size_getter(const std::vector<std::size_t> & ind)
 }
 
 template <std::floating_point T>
-void _MMijk_entry(
+void _MMijk_sim_entry(
     pybind11::handle obj, const std::vector<std::size_t> & individual
 )
 {
@@ -58,7 +60,30 @@ void _MMijk_entry(
 }
 
 template <std::floating_point T>
-void _MMTijk_entry(
+std::size_t _MMijk_bench_entry(const std::vector<std::size_t> & individual)
+{
+    auto [m, n] = size_getter<2>(individual);
+
+    auto [_A, _B, _C] =
+        alex::pointers::allocate_multiple<T, T, T>({m * n, m * n, m * n});
+
+    alex::arrays::shuffle_rt<2, decltype(_A)> A(std::move(_A), individual),
+        B(std::move(_B), individual), C(std::move(_C), individual);
+
+    std::chrono::high_resolution_clock::time_point t1 =
+        std::chrono::high_resolution_clock::now();
+
+    alex::patterns::mm_ijk(A, B, C);
+
+    std::chrono::high_resolution_clock::time_point t2 =
+        std::chrono::high_resolution_clock::now();
+
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count(
+    );
+}
+
+template <std::floating_point T>
+void _MMTijk_sim_entry(
     pybind11::handle obj, const std::vector<std::size_t> & individual
 )
 {
@@ -76,7 +101,30 @@ void _MMTijk_entry(
 }
 
 template <std::floating_point T>
-void _MMikj_entry(
+std::size_t _MMTijk_bench_entry(const std::vector<std::size_t> & individual)
+{
+    auto [m, n] = size_getter<2>(individual);
+
+    auto [_A, _B, _C] =
+        alex::pointers::allocate_multiple<T, T, T>({m * n, m * n, m * n});
+
+    alex::arrays::shuffle_rt<2, decltype(_A)> A(std::move(_A), individual),
+        B(std::move(_B), individual), C(std::move(_C), individual);
+
+    std::chrono::high_resolution_clock::time_point t1 =
+        std::chrono::high_resolution_clock::now();
+
+    alex::patterns::mmt_ijk(A, B, C);
+
+    std::chrono::high_resolution_clock::time_point t2 =
+        std::chrono::high_resolution_clock::now();
+
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count(
+    );
+}
+
+template <std::floating_point T>
+void _MMikj_sim_entry(
     pybind11::handle obj, const std::vector<std::size_t> & individual
 )
 {
@@ -94,7 +142,30 @@ void _MMikj_entry(
 }
 
 template <std::floating_point T>
-void _MMTikj_entry(
+std::size_t _MMikj_bench_entry(const std::vector<std::size_t> & individual)
+{
+    auto [m, n] = size_getter<2>(individual);
+
+    auto [_A, _B, _C] =
+        alex::pointers::allocate_multiple<T, T, T>({m * n, m * n, m * n});
+
+    alex::arrays::shuffle_rt<2, decltype(_A)> A(std::move(_A), individual),
+        B(std::move(_B), individual), C(std::move(_C), individual);
+
+    std::chrono::high_resolution_clock::time_point t1 =
+        std::chrono::high_resolution_clock::now();
+
+    alex::patterns::mm_ikj(A, B, C);
+
+    std::chrono::high_resolution_clock::time_point t2 =
+        std::chrono::high_resolution_clock::now();
+
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count(
+    );
+}
+
+template <std::floating_point T>
+void _MMTikj_sim_entry(
     pybind11::handle obj, const std::vector<std::size_t> & individual
 )
 {
@@ -112,7 +183,30 @@ void _MMTikj_entry(
 }
 
 template <std::floating_point T>
-void _Jacobi2D_entry(
+std::size_t _MMTikj_bench_entry(const std::vector<std::size_t> & individual)
+{
+    auto [m, n] = size_getter<2>(individual);
+
+    auto [_A, _B, _C] =
+        alex::pointers::allocate_multiple<T, T, T>({m * n, m * n, m * n});
+
+    alex::arrays::shuffle_rt<2, decltype(_A)> A(std::move(_A), individual),
+        B(std::move(_B), individual), C(std::move(_C), individual);
+
+    std::chrono::high_resolution_clock::time_point t1 =
+        std::chrono::high_resolution_clock::now();
+
+    alex::patterns::mmt_ikj(A, B, C);
+
+    std::chrono::high_resolution_clock::time_point t2 =
+        std::chrono::high_resolution_clock::now();
+
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count(
+    );
+}
+
+template <std::floating_point T>
+void _Jacobi2D_sim_entry(
     pybind11::handle obj, const std::vector<std::size_t> & individual
 )
 {
@@ -129,7 +223,29 @@ void _Jacobi2D_entry(
 }
 
 template <std::floating_point T>
-void _Cholesky_entry(
+std::size_t _Jacobi2D_bench_entry(const std::vector<std::size_t> & individual)
+{
+    auto [m, n] = size_getter<2>(individual);
+
+    auto [_A, _B] = alex::pointers::allocate_multiple<T, T>({m * n, m * n});
+
+    alex::arrays::shuffle_rt<2, decltype(_A)> A(std::move(_A), individual),
+        B(std::move(_B), individual);
+
+    std::chrono::high_resolution_clock::time_point t1 =
+        std::chrono::high_resolution_clock::now();
+
+    alex::patterns::jacobi2d(A, B);
+
+    std::chrono::high_resolution_clock::time_point t2 =
+        std::chrono::high_resolution_clock::now();
+
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count(
+    );
+}
+
+template <std::floating_point T>
+void _Cholesky_sim_entry(
     pybind11::handle obj, const std::vector<std::size_t> & individual
 )
 {
@@ -146,7 +262,29 @@ void _Cholesky_entry(
 }
 
 template <std::floating_point T>
-void _Crout_entry(
+std::size_t _Cholesky_bench_entry(const std::vector<std::size_t> & individual)
+{
+    auto [m, n] = size_getter<2>(individual);
+
+    auto [_A, _B] = alex::pointers::allocate_multiple<T, T>({m * n, m * n});
+
+    alex::arrays::shuffle_rt<2, decltype(_A)> A(std::move(_A), individual),
+        B(std::move(_B), individual);
+
+    std::chrono::high_resolution_clock::time_point t1 =
+        std::chrono::high_resolution_clock::now();
+
+    alex::patterns::cholesky_banachiewicz(A, B);
+
+    std::chrono::high_resolution_clock::time_point t2 =
+        std::chrono::high_resolution_clock::now();
+
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count(
+    );
+}
+
+template <std::floating_point T>
+void _Crout_sim_entry(
     pybind11::handle obj, const std::vector<std::size_t> & individual
 )
 {
@@ -154,7 +292,8 @@ void _Crout_entry(
 
     auto [m, n] = size_getter<2>(individual);
 
-    auto [_A, _B, _C] = alex::pointers::partition<T, T, T>(cache, {m * n, m * n, m * n});
+    auto [_A, _B, _C] =
+        alex::pointers::partition<T, T, T>(cache, {m * n, m * n, m * n});
 
     alex::arrays::shuffle_rt<2, decltype(_A)> A(std::move(_A), individual),
         B(std::move(_B), individual), C(std::move(_C), individual);
@@ -163,11 +302,33 @@ void _Crout_entry(
 }
 
 template <std::floating_point T>
-void _Himeno_entry(
+std::size_t _Crout_bench_entry(const std::vector<std::size_t> & individual)
+{
+    auto [m, n] = size_getter<2>(individual);
+
+    auto [_A, _B, _C] =
+        alex::pointers::allocate_multiple<T, T, T>({m * n, m * n, m * n});
+
+    alex::arrays::shuffle_rt<2, decltype(_A)> A(std::move(_A), individual),
+        B(std::move(_B), individual), C(std::move(_C), individual);
+
+    std::chrono::high_resolution_clock::time_point t1 =
+        std::chrono::high_resolution_clock::now();
+
+    alex::patterns::crout(A, B, C);
+
+    std::chrono::high_resolution_clock::time_point t2 =
+        std::chrono::high_resolution_clock::now();
+
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count(
+    );
+}
+
+template <std::floating_point T>
+void _Himeno_sim_entry(
     pybind11::handle obj, const std::vector<std::size_t> & individual
 )
 {
-
     Cache & cache = *reinterpret_cast<Cache *>(obj.ptr());
 
     auto [m, n, p] = size_getter<3>(individual);
@@ -192,24 +353,65 @@ void _Himeno_entry(
     alex::patterns::himeno(A, B, C, P, W1, W2);
 }
 
+template <std::floating_point T>
+std::size_t _Himeno_bench_entry(const std::vector<std::size_t> & individual)
+{
+    auto [m, n, p] = size_getter<3>(individual);
+
+    auto [_A, _B, _C, _P, _W1, _W2] = alex::pointers::allocate_multiple<
+        std::array<T, 3>,
+        std::array<T, 3>,
+        std::array<T, 3>,
+        T,
+        T,
+        T>({m * n * p, m * n * p, m * n * p, m * n * p, m * n * p, m * n * p});
+
+    alex::arrays::shuffle_rt<3, decltype(_A)> A(std::move(_A), individual),
+        B(std::move(_B), individual), C(std::move(_C), individual);
+
+    alex::arrays::shuffle_rt<3, decltype(_P)> P(std::move(_P), individual),
+        W1(std::move(_W1), individual), W2(std::move(_W2), individual);
+
+    std::chrono::high_resolution_clock::time_point t1 =
+        std::chrono::high_resolution_clock::now();
+
+    alex::patterns::himeno(A, B, C, P, W1, W2);
+
+    std::chrono::high_resolution_clock::time_point t2 =
+        std::chrono::high_resolution_clock::now();
+
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count(
+    );
+}
+
 #define GLUE_HELPER(x, y) x##y
 #define GLUE(x, y) GLUE_HELPER(x, y)
 
 #define REGISTER(NAME)                                                         \
     do {                                                                       \
         m.def(                                                                 \
-            "_" #NAME "_double_entry", &GLUE(_, GLUE(NAME, _entry)) < double > \
+            "_" #NAME "_double_sim_entry",                                     \
+            &GLUE(_, GLUE(NAME, _sim_entry)) < double >                        \
         );                                                                     \
         m.def(                                                                 \
-            "_" #NAME "_single_entry", &GLUE(_, GLUE(NAME, _entry)) < float >  \
+            "_" #NAME "_single_sim_entry",                                     \
+            &GLUE(_, GLUE(NAME, _sim_entry)) < float >                         \
+        );                                                                     \
+        m.def(                                                                 \
+            "_" #NAME "_double_bench_entry",                                   \
+            &GLUE(_, GLUE(NAME, _bench_entry)) < double >                      \
+        );                                                                     \
+        m.def(                                                                 \
+            "_" #NAME "_single_bench_entry",                                   \
+            &GLUE(_, GLUE(NAME, _bench_entry)) < float >                       \
         );                                                                     \
     } while (0)
 
 PYBIND11_MODULE(__alex_core, m)
 {
     REGISTER(MMijk);
-    REGISTER(MMikj);
     REGISTER(MMTijk);
+    REGISTER(MMikj);
     REGISTER(MMTikj);
     REGISTER(Jacobi2D);
     REGISTER(Cholesky);

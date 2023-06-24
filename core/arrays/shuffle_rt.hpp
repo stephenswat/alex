@@ -16,7 +16,7 @@ public:
     using value_type = typename pointer_type::value_type;
 
     shuffle_rt(T && _p, const std::vector<std::size_t> & _c)
-        : ptr(_p)
+        : ptr(std::forward<T>(_p))
         , m(utils::get_masks<N>(_c))
         , s(utils::get_sizes<N>(_c))
     {
@@ -70,6 +70,6 @@ private:
     }
 
     T ptr;
-    std::array<std::size_t, N> m, s;
+    const std::array<std::size_t, N> m, s;
 };
 }
