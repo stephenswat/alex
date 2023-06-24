@@ -14,7 +14,7 @@ def runPattern(
 ) -> alex.simulator.CacheSimulator:
     sim = alex.simulator.CacheSimulator(hierarchy)
 
-    getattr(__alex_core, "_{}_{}_entry".format(str(pattern), str(precision)))(
+    getattr(__alex_core, "_{}_{}_sim_entry".format(str(pattern), str(precision)))(
         sim._sim.first_level.backend, permutation
     )
 
@@ -24,16 +24,9 @@ def runPattern(
 
 def runBenchPattern(
     pattern: alex.definitions.Pattern,
-    hierarchy: alex.schema.CacheHierarchy,
     permutation: typing.List[int],
     precision: alex.definitions.Precision = alex.definitions.Precision.Single,
 ) -> alex.simulator.CacheSimulator:
-    sim = alex.simulator.CacheSimulator(hierarchy)
-
-    getattr(__alex_core, "_{}_{}_entry".format(str(pattern), str(precision)))(
-        sim._sim.first_level.backend, permutation
+    return getattr(__alex_core, "_{}_{}_bench_entry".format(str(pattern), str(precision)))(
+        permutation
     )
-
-    sim._sim.force_write_back()
-
-    return sim

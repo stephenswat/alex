@@ -1,9 +1,10 @@
 import alex.pattern
 import alex.schema
+import alex.definitions
 
 
 def evalFitness(
-    individual, hierarchy: alex.schema.CacheHierarchy, pattern: alex.pattern.Pattern
+    individual, hierarchy: alex.schema.CacheHierarchy, pattern: alex.definitions.Pattern
 ):
     simulator = alex.pattern.runPattern(pattern, hierarchy, individual)
 

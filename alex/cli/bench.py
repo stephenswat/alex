@@ -4,13 +4,24 @@ import csv
 import hashlib
 import logging
 import pathlib
+import numpy
 
 import alex
 import alex.logging
 import alex.schema
+import alex.pattern
 
 log = logging.getLogger(__name__)
 
+def formatNanoseconds(ns):
+    if ns < 10000:
+        return "%d ns" % (ns)
+    elif ns < 10000000:
+        return "%.1f us" % (ns / 1000.0)
+    elif ns < 10000000000:
+        return "%.1f ms" % (ns / 1000000.0)
+    else:
+        return "%.1f s" % (ns / 1000000000.0)
 
 def parseLayout(layout):
     if "," in layout:
@@ -52,6 +63,12 @@ def main():
         "--verbose",
         help="enable verbose output",
         action="store_true",
+    )
+    parser.add_argument(
+        "-r",
+        "--repetitions",
+        help="number of benchmark repetitions",
+        default=10
     )
 
     args = parser.parse_args()
@@ -114,3 +131,20 @@ def main():
         eval()
 
     log.info("Benchmarking true performance...")
+
+    runtimes = {}
+
+    for i in individuals:
+        log.info("Benchmarking layout %s with layout %s...", str(i.pattern), str(tuple(i.layout)))
+
+        results = []
+
+        for j in range(args.repetitions):
+            rt = alex.pattern.runBenchPattern(i.pattern, tuple(i.layout))
+            log.debug("...runtime for trial %d was %s", j, formatNanoseconds(rt))
+            results.append(rt)
+
+        mn = numpy.mean(results)
+        dv = numpy.std(results)
+
+        log.info("...runtime was %s (±%s)", formatNanoseconds(mn), formatNanoseconds(dv))

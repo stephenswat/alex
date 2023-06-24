@@ -16,6 +16,7 @@ import alex.pattern
 import alex.schema
 import alex.simulator
 import alex.utils
+import alex.definitions
 
 log = logging.getLogger(__name__)
 
@@ -101,8 +102,8 @@ def main():
     parser.add_argument(
         "-t",
         "--pattern",
-        type=alex.pattern.Pattern,
-        choices=list(alex.pattern.Pattern),
+        type=alex.definitions.Pattern,
+        choices=list(alex.definitions.Pattern),
         help="pattern type to use",
         required=True,
     )
