@@ -4,14 +4,16 @@ import csv
 import hashlib
 import logging
 import pathlib
+
 import numpy
 
 import alex
 import alex.logging
-import alex.schema
 import alex.pattern
+import alex.schema
 
 log = logging.getLogger(__name__)
+
 
 def formatNanoseconds(ns):
     if ns < 10000:
@@ -22,6 +24,7 @@ def formatNanoseconds(ns):
         return "%.1f ms" % (ns / 1000000.0)
     else:
         return "%.1f s" % (ns / 1000000000.0)
+
 
 def parseLayout(layout):
     if "," in layout:
@@ -65,10 +68,7 @@ def main():
         action="store_true",
     )
     parser.add_argument(
-        "-r",
-        "--repetitions",
-        help="number of benchmark repetitions",
-        default=10
+        "-r", "--repetitions", help="number of benchmark repetitions", default=10
     )
 
     args = parser.parse_args()
@@ -89,7 +89,8 @@ def main():
     )
 
     with open(args.cache, "r") as f:
-        hierarchy = alex.schema.CacheHierarchy.fromYamlFile(f)
+        pass
+        # hierarchy = alex.schema.CacheHierarchy.fromYamlFile(f)
 
     log.info("Reading input file from [bold magenta]%s[/]", args.input)
 
@@ -132,10 +133,14 @@ def main():
 
     log.info("Benchmarking true performance...")
 
-    runtimes = {}
+    # runtimes = {}
 
     for i in individuals:
-        log.info("Benchmarking layout %s with layout %s...", str(i.pattern), str(tuple(i.layout)))
+        log.info(
+            "Benchmarking layout %s with layout %s...",
+            str(i.pattern),
+            str(tuple(i.layout)),
+        )
 
         results = []
 
@@ -147,4 +152,6 @@ def main():
         mn = numpy.mean(results)
         dv = numpy.std(results)
 
-        log.info("...runtime was %s (±%s)", formatNanoseconds(mn), formatNanoseconds(dv))
+        log.info(
+            "...runtime was %s (±%s)", formatNanoseconds(mn), formatNanoseconds(dv)
+        )

@@ -9,6 +9,7 @@ import random
 
 import alex
 import alex.cli.utils
+import alex.definitions
 import alex.fitness
 import alex.ga
 import alex.logging
@@ -16,7 +17,6 @@ import alex.pattern
 import alex.schema
 import alex.simulator
 import alex.utils
-import alex.definitions
 
 log = logging.getLogger(__name__)
 

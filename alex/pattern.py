@@ -22,11 +22,12 @@ def runPattern(
 
     return sim
 
+
 def runBenchPattern(
     pattern: alex.definitions.Pattern,
     permutation: typing.List[int],
     precision: alex.definitions.Precision = alex.definitions.Precision.Single,
 ) -> alex.simulator.CacheSimulator:
-    return getattr(__alex_core, "_{}_{}_bench_entry".format(str(pattern), str(precision)))(
-        permutation
-    )
+    return getattr(
+        __alex_core, "_{}_{}_bench_entry".format(str(pattern), str(precision))
+    )(permutation)

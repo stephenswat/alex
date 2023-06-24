@@ -1,6 +1,6 @@
+import alex.definitions
 import alex.pattern
 import alex.schema
-import alex.definitions
 
 
 def evalFitness(
