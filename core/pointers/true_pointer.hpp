@@ -28,4 +28,22 @@ public:
 private:
     T * ptr;
 };
+
+template <typename... Ts, std::size_t ... Is>
+std::tuple<true_pointer<Ts>...> allocate_multiple_helper(
+    const std::array<std::size_t, sizeof...(Ts)> & sizes,
+    std::index_sequence<Is...>
+)
+{
+    return {std::make_unique<Ts>(sizes[Is])...};
+}
+
+
+template <typename... Ts>
+std::tuple<true_pointer<Ts>...> allocate_multiple(
+    const std::array<std::size_t, sizeof...(Ts)> & sizes
+)
+{
+    return allocate_multiple_helper<Ts...>(sizes, std::make_index_sequence<sizeof...(Ts)>());
+}
 }

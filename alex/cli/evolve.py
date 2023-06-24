@@ -7,9 +7,9 @@ import math
 import pathlib
 import random
 
-import yaml
-
 import alex
+import alex.cli.utils
+import alex.fitness
 import alex.ga
 import alex.logging
 import alex.pattern
@@ -78,21 +78,7 @@ def initialPop(*mtpl):
 
     return [tuple(q), tuple(q[::-1])]
 
-
-def evalFitness(
-    individual, hierarchy: alex.schema.CacheHierarchy, pattern: alex.pattern.Pattern
-):
-    simulator = alex.pattern.runPattern(pattern, hierarchy, individual)
-
-    l1 = simulator._sim.first_level
-
-    cycles = sum(x.stats()["HIT_count"] * x.latency for x in simulator._sim.levels())
-
-    return (l1.backend.STORE_count + l1.backend.LOAD_count) / cycles
-
-
-def parseBits(s):
-    return [int(x) for x in s.split(":")]
+    # return [tuple(random.sample(q, k=len(q))) for _ in range(15)]
 
 
 def main():
@@ -108,7 +94,7 @@ def main():
     parser.add_argument(
         "-b",
         "--bits",
-        type=parseBits,
+        type=alex.cli.utils.parseBits,
         help="colon-separated bit counts",
         required=True,
     )
@@ -163,7 +149,7 @@ def main():
         handlers=[alex.logging.LogHandler()],
     )
 
-    log.info("Welcome to ALEX version [bold yellow]%s")
+    log.info("Welcome to ALEX version [bold yellow]%s[/]", alex.__version__)
 
     log.info(
         "Access pattern is [bold yellow]%s[/] with dimension [bold yellow]%s[/]",
@@ -179,7 +165,7 @@ def main():
     )
 
     with open(args.cache, "r") as f:
-        hierarchy = alex.schema.CacheHierarchy(**yaml.safe_load(f))
+        hierarchy = alex.schema.CacheHierarchy.fromYamlFile(f)
 
     genetic_parameters = {
         "retained_count": 5,
@@ -199,7 +185,7 @@ def main():
         initial_population=initialPop(*args.bits),
         mutation_func=mutExchangeDifferent,
         crossover_func=cxGeneralizedOrdered,
-        fitness_func=evalFitness,
+        fitness_func=alex.fitness.evalFitness,
         fitness_func_kwargs={"hierarchy": hierarchy, "pattern": args.pattern},
         **genetic_parameters,
     )

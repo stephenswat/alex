@@ -23,7 +23,8 @@ flake8 = "^6.0.0"
 isort = "^5.12.0"
 
 [tool.poetry.scripts]
-alex = "alex.cli:main"
+alex-evolve = "alex.cli.evolve:main"
+alex-bench = "alex.cli.bench:main"
 
 [tool.poetry.build]
 script = "build.py"

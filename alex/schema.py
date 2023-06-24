@@ -2,6 +2,9 @@ import enum
 import typing
 
 import pydantic
+import yaml
+
+import alex.definitions
 
 
 class ReplacementPolicy(str, enum.Enum):
@@ -31,3 +34,20 @@ class Cache(pydantic.BaseModel):
 class CacheHierarchy(pydantic.BaseModel):
     caches: dict[str, Cache]
     memory: MainMemory
+
+    @staticmethod
+    def fromYamlFile(f):
+        return CacheHierarchy(**yaml.safe_load(f))
+
+
+class BenchmarkInputElement(pydantic.BaseModel):
+    pattern: alex.definitions.Pattern
+    layout: typing.List[int]
+
+
+class BenchmarkInput(pydantic.BaseModel):
+    pattern: alex.definitions.Pattern
+    layout: typing.List[int]
+    fitness: float
+    runtime: float
+    runtime_dev: float

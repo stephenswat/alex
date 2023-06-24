@@ -21,6 +21,7 @@
 #include "patterns/mmt_ikj.hpp"
 #include "patterns/crout.hpp"
 #include "pointers/simulated_pointer.hpp"
+#include "pointers/true_pointer.hpp"
 #include "utils/pdep.hpp"
 
 template <std::size_t N>
@@ -40,7 +41,7 @@ std::array<std::size_t, N> size_getter(const std::vector<std::size_t> & ind)
 }
 
 template <std::floating_point T>
-void _MMijk_entry(
+void _MMijk_sim_entry(
     pybind11::handle obj, const std::vector<std::size_t> & individual
 )
 {
@@ -55,6 +56,24 @@ void _MMijk_entry(
         B(std::move(_B), individual), C(std::move(_C), individual);
 
     alex::patterns::mm_ijk(A, B, C);
+}
+
+template <std::floating_point T>
+std::size_t _MMijk_bench_entry(
+    const std::vector<std::size_t> & individual
+)
+{
+    auto [m, n] = size_getter<2>(individual);
+
+    auto [_A, _B, _C] =
+        alex::pointers::allocate_multiple<T, T, T>({m * n, m * n, m * n});
+
+    alex::arrays::shuffle_rt<2, decltype(_A)> A(std::move(_A), individual),
+        B(std::move(_B), individual), C(std::move(_C), individual);
+
+    alex::patterns::mm_ijk(A, B, C);
+
+    return 0;
 }
 
 template <std::floating_point T>
@@ -198,21 +217,27 @@ void _Himeno_entry(
 #define REGISTER(NAME)                                                         \
     do {                                                                       \
         m.def(                                                                 \
-            "_" #NAME "_double_entry", &GLUE(_, GLUE(NAME, _entry)) < double > \
+            "_" #NAME "_double_sim_entry", &GLUE(_, GLUE(NAME, _sim_entry)) < double > \
         );                                                                     \
         m.def(                                                                 \
-            "_" #NAME "_single_entry", &GLUE(_, GLUE(NAME, _entry)) < float >  \
+            "_" #NAME "_single_sim_entry", &GLUE(_, GLUE(NAME, _sim_entry)) < float >  \
+        );                                                                     \
+        m.def(                                                                 \
+            "_" #NAME "_double_bench_entry", &GLUE(_, GLUE(NAME, _bench_entry)) < double > \
+        );                                                                     \
+        m.def(                                                                 \
+            "_" #NAME "_single_bench_entry", &GLUE(_, GLUE(NAME, _bench_entry)) < float >  \
         );                                                                     \
     } while (0)
 
 PYBIND11_MODULE(__alex_core, m)
 {
     REGISTER(MMijk);
-    REGISTER(MMikj);
-    REGISTER(MMTijk);
-    REGISTER(MMTikj);
-    REGISTER(Jacobi2D);
-    REGISTER(Cholesky);
-    REGISTER(Himeno);
-    REGISTER(Crout);
+    // REGISTER(MMikj);
+    // REGISTER(MMTijk);
+    // REGISTER(MMTikj);
+    // REGISTER(Jacobi2D);
+    // REGISTER(Cholesky);
+    // REGISTER(Himeno);
+    // REGISTER(Crout);
 }
