@@ -1,6 +1,7 @@
-import matplotlib.pyplot
 import argparse
 import pathlib
+
+import matplotlib.pyplot
 import pandas
 
 
@@ -51,8 +52,7 @@ def main() -> None:
     df_l = pandas.concat(dfs_l, axis=0, ignore_index=True)
     df_r = pandas.concat(dfs_r, axis=0, ignore_index=True)
 
-
-    matplotlib.rc('font', **{'size'   : 8})
+    matplotlib.rc("font", **{"size": 8})
 
     fig, ax = matplotlib.pyplot.subplots()
 
@@ -75,7 +75,10 @@ def main() -> None:
     pos = list(range(len(ptrns)))
 
     parts = ax.violinplot(
-        [df_r[df_r["pattern"] == t]["fitness"] for t in ptrns], pos, showextrema=False, widths=0.9
+        [df_r[df_r["pattern"] == t]["fitness"] for t in ptrns],
+        pos,
+        showextrema=False,
+        widths=0.9,
     )
 
     for pc in parts["bodies"]:
@@ -93,7 +96,7 @@ def main() -> None:
         ],
         [
             df_l[(df_l["pattern"] == t) & (df_l["generation"] == 0)][
-            "max_fitness"
+                "max_fitness"
             ].max()
             for t in ptrns
         ],
@@ -103,15 +106,14 @@ def main() -> None:
         label="Initial population",
     )
 
-
     ax.hlines(
         [
             df_l[(df_l["pattern"] == t) & (df_l["generation"] == 0)][
                 "min_fitness"
             ].min()
             for t in ptrns
-        ] +
-        [
+        ]
+        + [
             df_l[(df_l["pattern"] == t) & (df_l["generation"] == 0)][
                 "max_fitness"
             ].max()
@@ -134,9 +136,9 @@ def main() -> None:
     )
 
     ax.set_xticks(pos)
-    ax.set_xticklabels([render_pattern(i) for i in ptrns], rotation=45, ha='right')
+    ax.set_xticklabels([render_pattern(i) for i in ptrns], rotation=45, ha="right")
 
-    matplotlib.pyplot.savefig('destination_path.eps', format='eps')
+    matplotlib.pyplot.savefig("destination_path.eps", format="eps")
 
 
 if __name__ == "__main__":
