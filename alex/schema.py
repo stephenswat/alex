@@ -16,6 +16,9 @@ class MainMemory(pydantic.BaseModel):
     last: str
     latency: int
 
+    class Config:
+        frozen = True
+
 
 class Cache(pydantic.BaseModel):
     sets: int
@@ -30,10 +33,16 @@ class Cache(pydantic.BaseModel):
     victims_to: typing.Optional[str]
     latency: int
 
+    class Config:
+        frozen = True
+
 
 class CacheHierarchy(pydantic.BaseModel):
     caches: dict[str, Cache]
     memory: MainMemory
+
+    class Config:
+        frozen = True
 
     @staticmethod
     def fromYamlFile(f):
@@ -42,12 +51,18 @@ class CacheHierarchy(pydantic.BaseModel):
 
 class BenchmarkInputElement(pydantic.BaseModel):
     pattern: alex.definitions.Pattern
-    layout: typing.List[int]
+    layout: typing.Tuple[int, ...]
+
+    class Config:
+        frozen = True
 
 
-class BenchmarkInput(pydantic.BaseModel):
+class BenchmarkOutput(pydantic.BaseModel):
     pattern: alex.definitions.Pattern
-    layout: typing.List[int]
+    layout: typing.Tuple[int, ...]
     fitness: float
     runtime: float
     runtime_dev: float
+
+    class Config:
+        frozen = True

@@ -12,9 +12,13 @@ void mmt_ijk(const M & A, const M & B, M & C)
 
     for (std::size_t i = 0; i < m; ++i) {
         for (std::size_t j = 0; j < m; ++j) {
+            typename M::value_type acc = 0.;
+
             for (std::size_t k = 0; k < n; ++k) {
-                C.store(C.load(i, j) + A.load(i, k) * B.load(j, k), i, j);
+                acc += A.load(i, k) * B.load(j, k);
             }
+
+            C.store(acc, i, j);
         }
     }
 }
