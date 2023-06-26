@@ -1,6 +1,23 @@
 # ALEX
 
-ALEX is an **A**rray **L**ayout **E**volution E**X**periment designed to find
+[![Python Check Status](https://github.com/stephenswat/alex/actions/workflows/python.yaml/badge.svg?branch=main)](https://github.com/stephenswat/alex/actions/workflows/python.yaml)
+[![Python Check Status](https://github.com/stephenswat/alex/actions/workflows/cxx.yaml/badge.svg?branch=main)](https://github.com/stephenswat/alex/actions/workflows/cxx.yaml)
+[![Unlicense](https://img.shields.io/github/license/stephenswat/alex)](https://unlicense.org/)
+[![GitHub issues](https://img.shields.io/github/issues/stephenswat/alex)](https://github.com/stephenswat/alex/issues)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/stephenswat/alex)](https://github.com/stephenswat/alex/pulls)
+[![GitHub commit activity](https://img.shields.io/github/commit-activity/w/stephenswat/alex)](https://github.com/stephenswat/alex/commits/main)
+[![GitHub contributors](https://img.shields.io/github/contributors/stephenswat/alex)](https://github.com/stephenswat/alex/graphs/contributors)
+[![GitHub last commit](https://img.shields.io/github/last-commit/stephenswat/alex)](https://github.com/stephenswat/alex/commits/main)
+
+[<img src="docs/static/cern-logo.svg" alt="CERN logo" height="60px"/>](https://home.web.cern.ch/)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+[<img src="docs/static/uva-logo.svg" alt="UvA logo" height="60px"/>](https://www.uva.nl/)
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+[<img src="docs/static/pcs-logo.svg" alt="PCS logo" height="60px"/>](https://pcs-research.nl/)
+&nbsp;
+[<img src="docs/static/acts-logo.svg" alt="Acts logo" height="60px"/>](https://acts.readthedocs.io/en/latest/)
+
+**ALEX** is an **A**rray **L**ayout **E**volution E**X**periment designed to find
 cache-friendly Morton-esque multi-dimensional array layouts for specific
 workloads.
 
