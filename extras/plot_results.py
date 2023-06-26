@@ -8,8 +8,6 @@ import pandas
 def render_pattern(ptrn: str):
     splt = ptrn.split("_")
 
-    args = ", ".join("2^{{{}}}".format(i) for i in splt[1:])
-
     return f"{splt[0]}"
 
 
