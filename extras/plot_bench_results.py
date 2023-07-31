@@ -1,26 +1,58 @@
 import matplotlib.pyplot
+import numpy
 import pandas
+import scipy
 
 if __name__ == "__main__":
     df = pandas.read_csv("bench.csv")
 
-    matplotlib.pyplot.ylabel("Runtime [ms]")
-    matplotlib.pyplot.xlabel("Fitness")
-    matplotlib.pyplot.gcf().set_size_inches(3.5, 3.75)
-    # matplotlib.pyplot.yscale("log")
-    # matplotlib.pyplot.xscale("log")
+    df_cv = df["runtime_dev"] / df["runtime"]
 
-    for p in ["MMTijk", "Jacobi2D", "Himeno", "Cholesky"]:
+    print(f"The maximum CV value is {df_cv.max()}")
+
+    matplotlib.rcParams.update(
+        {
+            "font.size": 8,
+            "font.family": "serif",
+            "text.usetex": True,
+            "text.latex.preamble": """
+            \\usepackage{libertine}
+            \\usepackage[libertine]{newtxmath}
+            """,
+        }
+    )
+
+    fig, ax = matplotlib.pyplot.subplots(figsize=(3.333, 2.5), constrained_layout=True)
+
+    ax.set_ylabel("Runtime [ms]")
+    ax.set_xlabel("Fitness")
+
+    for p in [
+        "MMijk",
+        "MMTijk",
+        "MMikj",
+        "MMTikj",
+        "Jacobi2D",
+        "Cholesky",
+        "Crout",
+        "Himeno",
+    ]:
         dfs = df[df["pattern"] == p]
 
-        matplotlib.pyplot.errorbar(
+        corr = numpy.corrcoef(dfs[["fitness", "runtime"]], rowvar=False)[0, 1]
+
+        spear = scipy.stats.spearmanr(dfs[["fitness", "runtime"]])
+
+        print(f"ρP for {p} is {corr}, ρS is {spear.statistic}")
+
+        ax.scatter(
             dfs["fitness"],
             dfs["runtime"] / 1000000,
-            yerr=dfs["runtime_dev"] / 1000000,
-            fmt=".",
-            label=p,
+            s=2,
+            label=f"\\textsc{{{p}}}",
         )
 
-    matplotlib.pyplot.legend()
-    matplotlib.pyplot.tight_layout()
-    matplotlib.pyplot.savefig("fitness_vs_runtime.pdf")
+    lgnd = ax.legend()
+    for handle in lgnd.legend_handles:
+        handle.set_sizes([12.0])
+    fig.savefig("fitness_vs_runtime.pdf", bbox_inches="tight", pad_inches=0.02)

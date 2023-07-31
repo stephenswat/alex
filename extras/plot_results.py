@@ -2,16 +2,34 @@ import argparse
 import pathlib
 
 import matplotlib.pyplot
+import numpy
 import pandas
 
 
 def render_pattern(ptrn: str):
     splt = ptrn.split("_")
 
-    return f"{splt[0]}"
+    rem = ", ".join(str(i) for i in splt[1:])
+
+    return f"$\\textsc{{{splt[0]}}}({rem})$"
 
 
 def main() -> None:
+    matplotlib.rcParams.update(
+        {
+            "figure.titlesize": 8,
+            "axes.titlesize": 8,
+            "figure.labelsize": "medium",
+            "font.size": 8,
+            "font.family": "serif",
+            "text.usetex": True,
+            "text.latex.preamble": """
+            \\usepackage{libertine}
+            \\usepackage[libertine]{newtxmath}
+            """,
+        }
+    )
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -28,14 +46,14 @@ def main() -> None:
     dfs_r = []
 
     ptrns = [
+        "MMijk_11_11",
+        "MMTijk_11_11",
+        "MMikj_11_11",
+        "MMTikj_11_11",
+        "Jacobi2D_15_15",
         "Cholesky_12_12",
         "Crout_12_12",
         "Himeno_10_9_9",
-        "Jacobi2D_15_15",
-        "MMijk_11_11",
-        "MMikj_11_11",
-        "MMTijk_11_11",
-        "MMTikj_11_11",
     ]
 
     for t in ptrns:
@@ -52,20 +70,52 @@ def main() -> None:
 
     matplotlib.rc("font", **{"size": 8})
 
-    fig, ax = matplotlib.pyplot.subplots()
+    fig, axs = matplotlib.pyplot.subplots(
+        figsize=(3.333, 3.5), nrows=4, ncols=2, constrained_layout=True, sharex=True
+    )
 
-    ax.set_ylabel("Fitness")
-    ax.set_xlabel("Generation")
+    fig.supxlabel("Generation")
+    fig.supylabel("Fitness")
 
-    for t in ptrns:
+    for t, (x, y) in zip(ptrns, numpy.ndindex(axs.shape)):
+        ax = axs[x, y]
         rdf = df_l[df_l["pattern"] == t]
-        ax.plot(rdf["generation"], rdf["max_fitness"], label=t)
+        ax.set_title(render_pattern(t))
+        ax.plot(
+            rdf["generation"],
+            rdf["mean_fitness"],
+            "--",
+            label=render_pattern(t),
+            color="black",
+            linewidth=0.5,
+        )
+        ax.plot(
+            rdf["generation"],
+            rdf["max_fitness"],
+            label=render_pattern(t),
+            color="black",
+            linewidth=0.5,
+        )
+        ax.plot(
+            rdf["generation"],
+            rdf["min_fitness"],
+            label=render_pattern(t),
+            color="black",
+            linewidth=0.5,
+        )
+        ax.fill_between(
+            rdf["generation"],
+            rdf["min_fitness"],
+            rdf["max_fitness"],
+            alpha=0.2,
+            color="#D43F3A",
+        )
 
-    fig.legend()
+    matplotlib.pyplot.savefig(
+        "fitness_evolution.pdf", bbox_inches="tight", pad_inches=0.02
+    )
 
-    matplotlib.pyplot.show()
-
-    fig, ax = matplotlib.pyplot.subplots(layout="constrained", figsize=(3.5, 2))
+    fig, ax = matplotlib.pyplot.subplots(figsize=(3.333, 2.5), constrained_layout=True)
 
     ax.set_ylabel("Fitness")
     ax.set_xlabel("Access Pattern")
@@ -136,7 +186,9 @@ def main() -> None:
     ax.set_xticks(pos)
     ax.set_xticklabels([render_pattern(i) for i in ptrns], rotation=45, ha="right")
 
-    matplotlib.pyplot.savefig("destination_path.eps", format="eps")
+    matplotlib.pyplot.savefig(
+        "fitness_violin.pdf", bbox_inches="tight", pad_inches=0.02
+    )
 
 
 if __name__ == "__main__":

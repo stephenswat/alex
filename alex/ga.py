@@ -32,7 +32,6 @@ class GA:
         self,
         retained_count,
         generated_count,
-        elite_count,
         fitness_func,
         crossover_func,
         mutation_func,
@@ -42,13 +41,13 @@ class GA:
         self.generation = 0
         self.retained_count = retained_count
         self.generated_count = generated_count
-        self.elite_count = elite_count
         self.fitness_cache = {}
         self.fitness_func = fitness_func
         self.fitness_func_kwargs = fitness_func_kwargs or dict()
         self.crossover_func = crossover_func
         self.mutation_func = mutation_func
         self.generation_log = []
+        self.last_generation_time = None
 
         self.population = initial_population
 
@@ -58,8 +57,11 @@ class GA:
 
         return self.fitness_cache[i]
 
-    def resolve_population_fitness(self, executor):
-        todo = [x for x in self.population if x not in self.fitness_cache]
+    def resolve_population_fitness(self, executor, population=None):
+        if population is None:
+            population = self.population
+
+        todo = [x for x in population if x not in self.fitness_cache]
 
         if executor is None:
             results = map(
@@ -76,7 +78,6 @@ class GA:
             self.fitness_cache[i] = f
 
     def process_generation(self, n, executor):
-        t1 = time.perf_counter()
         self.resolve_population_fitness(executor)
         t2 = time.perf_counter()
 
@@ -95,7 +96,7 @@ class GA:
                 mean_fitness=numpy.mean(fitnesses),
                 dev_fitness=numpy.std(fitnesses),
                 species_size=len(self.fitness_cache),
-                runtime=t2 - t1,
+                runtime=t2 - self.last_generation_time,
             )
         )
 
@@ -122,58 +123,44 @@ class GA:
             + f"records [bold cyan]{tg.species_size:6d}[/]"
             + f" ([bold cyan]{dlt_spc:+3d}[/])"
             + ", "
-            + f"runtime [bold cyan]{t2 - t1:7.3f}[/] sec",
+            + f"runtime [bold cyan]{t2 - self.last_generation_time:7.3f}[/] sec",
             extra={"highlight": False},
         )
 
     def run(self, generations=1, executor=None):
         with alex.signal.CatchSigInt() as s:
-            for _ in range(generations - 1):
+            for c in range(generations):
+                if self.last_generation_time is None:
+                    self.last_generation_time = time.perf_counter()
+
                 self.process_generation(self.generation, executor)
+
+                self.last_generation_time = time.perf_counter()
 
                 if not s.valid():
                     log.warning("Stopping evolutionary process due to interrupt")
                     break
 
-                tmp_pop = sorted(
-                    list(set(self.population)),
-                    key=lambda x: self.get_fitness(x),
-                    reverse=True,
-                )
-
-                elite_pop = tmp_pop[: self.elite_count]
-                non_elite_pop = tmp_pop[self.elite_count :]
-
-                non_elite_size = self.retained_count - self.elite_count
-
-                if non_elite_size > 0 and len(non_elite_pop) > 0:
-                    total_fitness = sum(self.get_fitness(i) for i in non_elite_pop)
-                    non_elite_selection = numpy.random.choice(
-                        len(non_elite_pop),
-                        size=min(non_elite_size, len(non_elite_pop)),
-                        replace=False,
-                        p=[self.get_fitness(i) / total_fitness for i in non_elite_pop],
-                    )
-                else:
-                    non_elite_selection = []
-
-                mu = elite_pop + [non_elite_pop[i] for i in non_elite_selection]
-
-                lam = [
-                    self.mutation_func(random.choice(mu))
-                    if random.random() < 0.5
-                    else self.crossover_func(*random.sample(mu, k=2))
+                offspring = [
+                    self.crossover_func(*random.sample(self.population, k=2))
                     for _ in range(self.generated_count)
                 ]
 
-                self.population = mu + lam
+                mutated_offspring = [
+                    x if random.random() < 0.7 else self.mutation_func(x)
+                    for x in offspring
+                ]
+
+                self.resolve_population_fitness(executor, mutated_offspring)
+
+                self.population = sorted(
+                    mutated_offspring, key=lambda x: self.get_fitness(x), reverse=True
+                )[: self.retained_count]
 
                 self.generation += 1
-            else:
-                self.process_generation(self.generation, executor)
 
     def results(self):
-        return [(i, self.get_fitness(i)) for i in self.population]
+        return [(i, self.get_fitness(i)) for i in self.fitness_cache.keys()]
 
     def write_log(self, file):
         writer = csv.DictWriter(

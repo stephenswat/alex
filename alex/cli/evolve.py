@@ -169,9 +169,8 @@ def main():
         hierarchy = alex.schema.CacheHierarchy.fromYamlFile(f)
 
     genetic_parameters = {
-        "retained_count": 5,
-        "generated_count": 10,
-        "elite_count": 2,
+        "retained_count": 20,
+        "generated_count": 20,
     }
 
     log.info(

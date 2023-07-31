@@ -6,14 +6,14 @@ import random
 import alex.definitions
 
 COMBINATIONS = [
-    (alex.definitions.Pattern.MMijk, (9, 9)),
-    (alex.definitions.Pattern.MMikj, (9, 9)),
-    (alex.definitions.Pattern.MMTijk, (9, 9)),
-    (alex.definitions.Pattern.MMTikj, (9, 9)),
-    (alex.definitions.Pattern.Jacobi2D, (13, 13)),
-    (alex.definitions.Pattern.Himeno, (8, 7, 7)),
-    (alex.definitions.Pattern.Cholesky, (10, 10)),
-    (alex.definitions.Pattern.Crout, (9, 9)),
+    (alex.definitions.Pattern.MMijk, (11, 11)),
+    (alex.definitions.Pattern.MMikj, (11, 11)),
+    (alex.definitions.Pattern.MMTijk, (11, 11)),
+    (alex.definitions.Pattern.MMTikj, (11, 11)),
+    (alex.definitions.Pattern.Jacobi2D, (15, 15)),
+    (alex.definitions.Pattern.Himeno, (10, 9, 9)),
+    (alex.definitions.Pattern.Cholesky, (12, 12)),
+    (alex.definitions.Pattern.Crout, (12, 12)),
 ]
 
 if __name__ == "__main__":

@@ -7,7 +7,7 @@ license = "Unlicense"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8.1"
+python = "^3.9,<3.13"
 pycachesim = "0.3.1"
 pybind11 = "2.10.3"
 pyyaml = "^6.0"
@@ -16,6 +16,7 @@ numpy = "^1.24.3"
 rich = "^13.3.5"
 matplotlib = "^3.7.1"
 pandas = "^2.0.1"
+scipy = "^1.11.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "*"
