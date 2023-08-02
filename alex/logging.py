@@ -14,10 +14,9 @@ class LogHandler(logging.Handler):
     def __init__(
         self,
         level: typing.Union[int, str] = logging.NOTSET,
-        console: typing.Optional[rich.console.Console] = None,
     ) -> None:
         super().__init__(level=level)
-        self.console = console or rich.logging.get_console()
+        self.console = rich.console.Console(width=1000000000)
 
     def emit(self, record: logging.LogRecord) -> None:
         message_text = rich.text.Text.from_markup(
