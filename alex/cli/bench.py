@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 def formatNanoseconds(ns):
     if ns < 10000:
-        return "%d ns" % (ns)
+        return "%.1f ns" % (ns)
     elif ns < 10000000:
         return "%.1f us" % (ns / 1000.0)
     elif ns < 10000000000:
@@ -132,6 +132,9 @@ def main():
         type=int,
         default=10,
     )
+    parser.add_argument(
+        "--no-simulate", action="store_false", dest="simulate", default=True
+    )
 
     args = parser.parse_args()
 
@@ -176,23 +179,28 @@ def main():
 
     log.info("Total number of individuals is [bold cyan]%d[/]", len(individuals))
 
-    log.info("Evaluating fitness function...")
+    if args.simulate:
+        log.info("Evaluating fitness function...")
 
-    if args.parallel is not None:
-        if args.parallel < 0:
-            log.info("Running evaluation with automatic process count")
+        if args.parallel is not None:
+            if args.parallel < 0:
+                log.info("Running evaluation with automatic process count")
+            else:
+                log.info(
+                    "Running evaluation with [bold yellow]%d[/] processes",
+                    args.parallel,
+                )
+
+            with concurrent.futures.ProcessPoolExecutor(
+                max_workers=None if args.parallel < 0 else args.parallel
+            ) as executor:
+                fitnesses = eval(individuals, hierarchy, executor=executor)
         else:
-            log.info(
-                "Running evaluation with [bold yellow]%d[/] processes", args.parallel
-            )
-
-        with concurrent.futures.ProcessPoolExecutor(
-            max_workers=None if args.parallel < 0 else args.parallel
-        ) as executor:
-            fitnesses = eval(individuals, hierarchy, executor=executor)
+            log.info("Running evaluation sequentially")
+            fitnesses = eval(individuals, hierarchy)
     else:
-        log.info("Running evaluation sequentially")
-        fitnesses = eval(individuals, hierarchy)
+        log.info("Skipping simulation, assuming zero for all individuals.")
+        fitnesses = [0 for _ in individuals]
 
     log.info("Benchmarking true performance...")
 

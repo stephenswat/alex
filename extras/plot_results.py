@@ -1,20 +1,157 @@
 import argparse
 import pathlib
 
+import matplotlib.patches
 import matplotlib.pyplot
 import numpy
 import pandas
+
+ORDER = [
+    "MMijk",
+    "MMTijk",
+    "MMikj",
+    "MMTikj",
+    "Jacobi2D",
+    "Cholesky",
+    "Crout",
+    "Himeno",
+]
 
 
 def render_pattern(ptrn: str):
     splt = ptrn.split("_")
 
-    rem = ", ".join(str(i) for i in splt[1:])
+    if splt[0] in ["Cholesky", "Crout"] or splt[0][:2] == "MM":
+        rem = str(splt[1])
+    else:
+        rem = ", ".join(str(i) for i in splt[1:])
 
-    return f"$\\textsc{{{splt[0]}}}({rem})$"
+    return f"$\\textsc{{{splt[0]}}}({rem}; 4)$"
 
 
-def main() -> None:
+palette = ["#d62728", "#1f77b4"]
+
+
+def make_evolution_plot(path: pathlib.Path):
+    log_glob = path.glob("*-log.csv")
+
+    inputs = [tuple(i.stem.split("-")[:4]) for i in log_glob]
+
+    uniques = sorted(
+        list(set((j[0], j[1]) for j in inputs)), key=lambda x: ORDER.index(x[0])
+    )
+    processors = sorted(list(set(i[3] for i in inputs)))
+
+    fig, axs = matplotlib.pyplot.subplots(
+        figsize=(3.333, 3),
+        nrows=int(len(uniques) / 2 + 0.5),
+        ncols=2,
+        constrained_layout=True,
+        sharex=True,
+    )
+
+    fig.supxlabel("Generation")
+    fig.supylabel("Fitness")
+
+    for (t, s), (x, y) in zip(uniques, numpy.ndindex(axs.shape)):
+        for i, p in enumerate(processors):
+            df_l = pandas.read_csv(path / f"{t}-{s}-0-{p}-log.csv")
+
+            ax = axs[x, y]
+            ax.set_title(render_pattern(f"{t}_{s}"))
+            ax.plot(
+                df_l["generation"],
+                df_l["mean_fitness"],
+                "--",
+                color=palette[i],
+                linewidth=0.5,
+            )
+            ax.plot(
+                df_l["generation"],
+                df_l["max_fitness"],
+                color=palette[i],
+                linewidth=0.5,
+            )
+            ax.plot(
+                df_l["generation"],
+                df_l["min_fitness"],
+                color=palette[i],
+                linewidth=0.5,
+            )
+            ax.fill_between(
+                df_l["generation"],
+                df_l["min_fitness"],
+                df_l["max_fitness"],
+                alpha=0.2,
+                color=palette[i],
+            )
+
+    matplotlib.pyplot.savefig(
+        "fitness_evolution.pdf", bbox_inches="tight", pad_inches=0.02
+    )
+
+
+def make_violin_plot(path: pathlib.Path):
+    rnk_glob = path.glob("*-ranking.csv")
+
+    inputs = [tuple(i.stem.split("-")[:4]) for i in rnk_glob]
+
+    fig, ax = matplotlib.pyplot.subplots(figsize=(3.333, 2), constrained_layout=True)
+
+    ax.set_ylabel("Fitness")
+    ax.set_xlabel("Access Pattern")
+
+    uniques = sorted(
+        list(set((j[0], j[1]) for j in inputs)), key=lambda x: ORDER.index(x[0])
+    )
+    pos = list(range(len(uniques)))
+
+    labels = []
+
+    for i, c in enumerate(sorted(list(set(i[3] for i in inputs)))):
+        labels.append(
+            (matplotlib.patches.Patch(color=palette[i], alpha=0.8), c.replace("_", " "))
+        )
+
+        dfs_r = []
+
+        for t, s in uniques:
+            dft_r = pandas.read_csv(path / f"{t}-{s}-0-{c}-ranking.csv")
+            dft_r["pattern"] = t
+            dft_r["size"] = s
+            dfs_r.append(dft_r)
+
+        df_r = pandas.concat(dfs_r, axis=0, ignore_index=True)
+
+        parts = ax.violinplot(
+            [
+                df_r[(df_r["pattern"] == t) & (df_r["size"] == s)]["fitness"]
+                for (t, s) in uniques
+            ],
+            pos,
+            showextrema=False,
+            widths=0.9,
+        )
+
+        for pc in parts["bodies"]:
+            pc.set_facecolor(palette[i])
+            pc.set_alpha(0.8)
+
+    ax.legend(*zip(*labels))
+    ax.set_xticks(pos)
+    ax.set_xticklabels(
+        [render_pattern(f"{t}_{s}") for (t, s) in uniques],
+        rotation=30,
+        ha="right",
+        rotation_mode="anchor",
+    )
+
+    matplotlib.pyplot.savefig(
+        "fitness_violin.pdf", bbox_inches="tight", pad_inches=0.02
+    )
+
+
+if __name__ == "__main__":
     matplotlib.rcParams.update(
         {
             "figure.titlesize": 8,
@@ -42,154 +179,5 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    dfs_l = []
-    dfs_r = []
-
-    ptrns = [
-        "MMijk_11_11",
-        "MMTijk_11_11",
-        "MMikj_11_11",
-        "MMTikj_11_11",
-        "Jacobi2D_15_15",
-        "Cholesky_12_12",
-        "Crout_12_12",
-        "Himeno_10_9_9",
-    ]
-
-    for t in ptrns:
-        dft_l = pandas.read_csv(args.input / f"{t}_log.csv")
-        dft_l["pattern"] = t
-        dfs_l.append(dft_l)
-
-        dft_r = pandas.read_csv(args.input / f"{t}_ranking.csv")
-        dft_r["pattern"] = t
-        dfs_r.append(dft_r)
-
-    df_l = pandas.concat(dfs_l, axis=0, ignore_index=True)
-    df_r = pandas.concat(dfs_r, axis=0, ignore_index=True)
-
-    matplotlib.rc("font", **{"size": 8})
-
-    fig, axs = matplotlib.pyplot.subplots(
-        figsize=(3.333, 3.5), nrows=4, ncols=2, constrained_layout=True, sharex=True
-    )
-
-    fig.supxlabel("Generation")
-    fig.supylabel("Fitness")
-
-    for t, (x, y) in zip(ptrns, numpy.ndindex(axs.shape)):
-        ax = axs[x, y]
-        rdf = df_l[df_l["pattern"] == t]
-        ax.set_title(render_pattern(t))
-        ax.plot(
-            rdf["generation"],
-            rdf["mean_fitness"],
-            "--",
-            label=render_pattern(t),
-            color="black",
-            linewidth=0.5,
-        )
-        ax.plot(
-            rdf["generation"],
-            rdf["max_fitness"],
-            label=render_pattern(t),
-            color="black",
-            linewidth=0.5,
-        )
-        ax.plot(
-            rdf["generation"],
-            rdf["min_fitness"],
-            label=render_pattern(t),
-            color="black",
-            linewidth=0.5,
-        )
-        ax.fill_between(
-            rdf["generation"],
-            rdf["min_fitness"],
-            rdf["max_fitness"],
-            alpha=0.2,
-            color="#D43F3A",
-        )
-
-    matplotlib.pyplot.savefig(
-        "fitness_evolution.pdf", bbox_inches="tight", pad_inches=0.02
-    )
-
-    fig, ax = matplotlib.pyplot.subplots(figsize=(3.333, 2.5), constrained_layout=True)
-
-    ax.set_ylabel("Fitness")
-    ax.set_xlabel("Access Pattern")
-
-    pos = list(range(len(ptrns)))
-
-    parts = ax.violinplot(
-        [df_r[df_r["pattern"] == t]["fitness"] for t in ptrns],
-        pos,
-        showextrema=False,
-        widths=0.9,
-    )
-
-    for pc in parts["bodies"]:
-        pc.set_facecolor("#D43F3A")
-        pc.set_edgecolor("black")
-        pc.set_alpha(1)
-
-    ax.vlines(
-        [i + 0.0012 for i in pos],
-        [
-            df_l[(df_l["pattern"] == t) & (df_l["generation"] == 0)][
-                "min_fitness"
-            ].min()
-            for t in ptrns
-        ],
-        [
-            df_l[(df_l["pattern"] == t) & (df_l["generation"] == 0)][
-                "max_fitness"
-            ].max()
-            for t in ptrns
-        ],
-        color="k",
-        linestyle="-",
-        lw=2,
-        label="Initial population",
-    )
-
-    ax.hlines(
-        [
-            df_l[(df_l["pattern"] == t) & (df_l["generation"] == 0)][
-                "min_fitness"
-            ].min()
-            for t in ptrns
-        ]
-        + [
-            df_l[(df_l["pattern"] == t) & (df_l["generation"] == 0)][
-                "max_fitness"
-            ].max()
-            for t in ptrns
-        ],
-        [i - 0.1 for i in pos] * 2,
-        [i + 0.1 for i in pos] * 2,
-        color="k",
-        linestyle="-",
-        lw=1,
-    )
-
-    ax.vlines(
-        pos,
-        [df_r[df_r["pattern"] == t]["fitness"].min() for t in ptrns],
-        [df_r[df_r["pattern"] == t]["fitness"].max() for t in ptrns],
-        color="k",
-        linestyle="-",
-        lw=0.5,
-    )
-
-    ax.set_xticks(pos)
-    ax.set_xticklabels([render_pattern(i) for i in ptrns], rotation=45, ha="right")
-
-    matplotlib.pyplot.savefig(
-        "fitness_violin.pdf", bbox_inches="tight", pad_inches=0.02
-    )
-
-
-if __name__ == "__main__":
-    main()
+    make_evolution_plot(args.input)
+    make_violin_plot(args.input)
