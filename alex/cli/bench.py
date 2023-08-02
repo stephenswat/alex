@@ -200,7 +200,7 @@ def main():
             fitnesses = eval(individuals, hierarchy)
     else:
         log.info("Skipping simulation, assuming zero for all individuals.")
-        fitnesses = [0 for _ in individuals]
+        fitnesses = {i: 0 for i in individuals}
 
     log.info("Benchmarking true performance...")
 
