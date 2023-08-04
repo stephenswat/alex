@@ -7,7 +7,7 @@ caches:
     write_back: true
     store_to: L2
     load_from: L2
-    latency: 4
+    latency: 7
   L2:
     sets: 1024
     ways: 8
