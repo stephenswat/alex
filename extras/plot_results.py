@@ -1,5 +1,6 @@
 import argparse
 import pathlib
+import re
 
 import matplotlib.patches
 import matplotlib.pyplot
@@ -18,11 +19,23 @@ ORDER = [
 ]
 
 
+def parse_filename(s: str):
+    if m := re.fullmatch(
+        r"([A-Za-z0-9]+)-(\d+(?:_\d+)*)-(\d+)-([A-Za-z0-9_\-]+)-(?:log|ranking).csv", s
+    ):
+        return (m.group(1), m.group(2), m.group(3), m.group(4))
+    else:
+        raise ValueError("Invalid file name " + s + "!")
+
+
 def render_pattern(ptrn: str):
     splt = ptrn.split("_")
 
     if splt[0] in ["Cholesky", "Crout"] or splt[0][:2] == "MM":
-        rem = str(splt[1])
+        if splt[0][:3] == "MMT":
+            rem = str(splt[1]) + ", " + str(splt[1])
+        else:
+            rem = str(splt[1])
     else:
         rem = ", ".join(str(i) for i in splt[1:])
 
@@ -35,7 +48,7 @@ palette = ["#d62728", "#1f77b4"]
 def make_evolution_plot(path: pathlib.Path):
     log_glob = path.glob("*-log.csv")
 
-    inputs = [tuple(i.stem.split("-")[:4]) for i in log_glob]
+    inputs = [parse_filename(i.name) for i in log_glob]
 
     uniques = sorted(
         list(set((j[0], j[1]) for j in inputs)), key=lambda x: ORDER.index(x[0])
@@ -94,7 +107,7 @@ def make_evolution_plot(path: pathlib.Path):
 def make_violin_plot(path: pathlib.Path):
     rnk_glob = path.glob("*-ranking.csv")
 
-    inputs = [tuple(i.stem.split("-")[:4]) for i in rnk_glob]
+    inputs = [parse_filename(i.name) for i in rnk_glob]
 
     fig, ax = matplotlib.pyplot.subplots(figsize=(3.333, 2), constrained_layout=True)
 

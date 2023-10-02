@@ -4,8 +4,22 @@ import matplotlib.pyplot
 import numpy
 import pandas
 import scipy
+import pathlib
+import argparse
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "-i",
+        "--input",
+        type=pathlib.Path,
+        help="input directory",
+        required=True,
+    )
+
+    args = parser.parse_args()
+
     matplotlib.rcParams.update(
         {
             "figure.labelsize": "medium",
@@ -22,7 +36,7 @@ if __name__ == "__main__":
         }
     )
 
-    processors = ["Intel_Xeon_E5_2660_v3", "AMD_EPYC_7413"]
+    processors = ["Intel_Xeon_E5-2660_v3", "AMD_EPYC_7413"]
 
     fig, axs = matplotlib.pyplot.subplots(
         figsize=(3.333, 3),
@@ -33,7 +47,7 @@ if __name__ == "__main__":
     )
 
     for (n, processor), ax in zip(enumerate(processors), axs.flat):
-        df = pandas.read_csv(f"~/alex-data/bench_{processor}.csv")
+        df = pandas.read_csv(args.input / f"bench_fitness_output_{processor}.csv")
 
         df_cv = df["runtime_dev"] / df["runtime"]
 
@@ -70,7 +84,10 @@ if __name__ == "__main__":
             print(f"ρP for {p} is {corr}, ρS is {spear.statistic}")
 
             if p in ["Cholesky", "Crout"] or p[:2] == "MM":
-                bit_suffix = str(bits[0])
+                if p[:3] == "MMT":
+                    bit_suffix = str(bits[0]) + ", " + str(bits[0])
+                else:
+                    bit_suffix = str(bits[0])
             else:
                 bit_suffix = ",".join(str(x) for x in bits)
 
