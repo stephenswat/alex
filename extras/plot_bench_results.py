@@ -1,11 +1,11 @@
+import argparse
 import collections
+import pathlib
 
 import matplotlib.pyplot
 import numpy
 import pandas
 import scipy
-import pathlib
-import argparse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
