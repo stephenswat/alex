@@ -28,7 +28,7 @@ def parse_filename(s: str):
         raise ValueError("Invalid file name " + s + "!")
 
 
-def render_pattern(ptrn: str):
+def render_pattern(ptrn: str, tex: bool = True):
     splt = ptrn.split("_")
 
     if splt[0] in ["Cholesky", "Crout"] or splt[0][:2] == "MM":
@@ -39,13 +39,13 @@ def render_pattern(ptrn: str):
     else:
         rem = ", ".join(str(i) for i in splt[1:])
 
-    return f"$\\textsc{{{splt[0]}}}({rem}; 4)$"
+    return f"$\\textsc{{{splt[0]}}}({rem}; 4)$" if tex else f"{splt[0]}({rem}; 4)"
 
 
 palette = ["#d62728", "#1f77b4"]
 
 
-def make_evolution_plot(path: pathlib.Path, output: pathlib.Path):
+def make_evolution_plot(path: pathlib.Path, output: pathlib.Path, tex: bool = True):
     log_glob = path.glob("*-log.csv")
 
     inputs = [parse_filename(i.name) for i in log_glob]
@@ -71,7 +71,7 @@ def make_evolution_plot(path: pathlib.Path, output: pathlib.Path):
             df_l = pandas.read_csv(path / f"{t}-{s}-0-{p}-log.csv")
 
             ax = axs[x, y]
-            ax.set_title(render_pattern(f"{t}_{s}"))
+            ax.set_title(render_pattern(f"{t}_{s}", tex))
             ax.plot(
                 df_l["generation"],
                 df_l["mean_fitness"],
@@ -147,4 +147,4 @@ if __name__ == "__main__":
         }
     )
 
-    make_evolution_plot(args.input, args.output)
+    make_evolution_plot(args.input, args.output, args.use_tex)

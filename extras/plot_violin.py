@@ -28,7 +28,7 @@ def parse_filename(s: str):
         raise ValueError("Invalid file name " + s + "!")
 
 
-def render_pattern(ptrn: str):
+def render_pattern(ptrn: str, tex: bool = True):
     splt = ptrn.split("_")
 
     if splt[0] in ["Cholesky", "Crout"] or splt[0][:2] == "MM":
@@ -39,13 +39,13 @@ def render_pattern(ptrn: str):
     else:
         rem = ", ".join(str(i) for i in splt[1:])
 
-    return f"$\\textsc{{{splt[0]}}}({rem}; 4)$"
+    return f"$\\textsc{{{splt[0]}}}({rem}; 4)$" if tex else f"{splt[0]}({rem}; 4)"
 
 
 palette = ["#d62728", "#1f77b4"]
 
 
-def make_violin_plot(path: pathlib.Path, output: pathlib.Path):
+def make_violin_plot(path: pathlib.Path, output: pathlib.Path, tex: bool = True):
     rnk_glob = path.glob("*-ranking.csv")
 
     inputs = [parse_filename(i.name) for i in rnk_glob]
@@ -94,7 +94,7 @@ def make_violin_plot(path: pathlib.Path, output: pathlib.Path):
     ax.legend(*zip(*labels))
     ax.set_xticks(pos)
     ax.set_xticklabels(
-        [render_pattern(f"{t}_{s}") for (t, s) in uniques],
+        [render_pattern(f"{t}_{s}", tex) for (t, s) in uniques],
         rotation=30,
         ha="right",
         rotation_mode="anchor",
@@ -148,4 +148,4 @@ if __name__ == "__main__":
         }
     )
 
-    make_violin_plot(args.input, args.output)
+    make_violin_plot(args.input, args.output, args.use_tex)

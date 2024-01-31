@@ -120,6 +120,8 @@ if __name__ == "__main__":
                 s=2,
                 label=f"$\\textsc{{{p}}}({bit_suffix}; 4)$"
                 if args.use_tex
+                else f"{p}({bit_suffix}; 4)"
+                if args.use_tex
                 else f"{p}({bit_suffix}; 4)",
             )
 
