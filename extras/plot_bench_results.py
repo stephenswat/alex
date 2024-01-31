@@ -13,9 +13,23 @@ if __name__ == "__main__":
     parser.add_argument(
         "-i",
         "--input",
-        type=pathlib.Path,
-        help="input directory",
+        help="input directory files (model:file)",
+        nargs="+",
+        action="extend",
         required=True,
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="output PDF file",
+        type=pathlib.Path,
+        required=True,
+    )
+    parser.add_argument(
+        "--no-tex",
+        help="disable TeX rendering",
+        action="store_false",
+        dest="use_tex",
     )
 
     args = parser.parse_args()
@@ -28,7 +42,7 @@ if __name__ == "__main__":
             "axes.titlesize": "medium",
             "font.size": 8,
             "font.family": "serif",
-            "text.usetex": True,
+            "text.usetex": args.use_tex,
             "text.latex.preamble": """
             \\usepackage{libertine}
             \\usepackage[libertine]{newtxmath}
@@ -36,18 +50,27 @@ if __name__ == "__main__":
         }
     )
 
-    processors = ["Intel_Xeon_E5-2660_v3", "AMD_EPYC_7413"]
-
     fig, axs = matplotlib.pyplot.subplots(
-        figsize=(3.333, 3),
-        nrows=len(processors),
+        figsize=(3.333, 1.5 * len(args.input)),
+        nrows=len(args.input),
         ncols=1,
         constrained_layout=True,
         sharex=True,
     )
 
-    for (n, processor), ax in zip(enumerate(processors), axs.flat):
-        df = pandas.read_csv(args.input / f"bench_fitness_output_{processor}.csv")
+    for (n, s), ax in zip(
+        enumerate(args.input), axs.flat if len(args.input) > 1 else [axs]
+    ):
+        try:
+            processor, file_name = s.split(":")
+        except:
+            raise ValueError(
+                'Input "%s" could not be parsed as [CPU NAME]:[FILE] pair' % s
+            )
+
+        print("CPU model: %s" % processor.replace("_", " "))
+
+        df = pandas.read_csv(file_name)
 
         df_cv = df["runtime_dev"] / df["runtime"]
 
@@ -56,7 +79,7 @@ if __name__ == "__main__":
         ax.set_title(processor.replace("_", " "))
         ax.set_ylabel("Runtime [ms]")
 
-        if n == len(processors) - 1:
+        if n == len(args.input) - 1:
             ax.set_xlabel("Fitness")
 
         for p in [
@@ -95,7 +118,9 @@ if __name__ == "__main__":
                 dfs["fitness"],
                 dfs["runtime"] / 1000000,
                 s=2,
-                label=f"$\\textsc{{{p}}}({bit_suffix}; 4)$",
+                label=f"$\\textsc{{{p}}}({bit_suffix}; 4)$"
+                if args.use_tex
+                else f"{p}({bit_suffix}; 4)",
             )
 
         if n == 0:
@@ -105,4 +130,7 @@ if __name__ == "__main__":
             for handle in lgnd.legend_handles:
                 handle.set_sizes([10.0])
 
-    fig.savefig("fitness_vs_runtime.pdf", bbox_inches="tight", pad_inches=0.02)
+        if n != len(args.input) - 1:
+            print()
+
+    fig.savefig(args.output, bbox_inches="tight", pad_inches=0.02)

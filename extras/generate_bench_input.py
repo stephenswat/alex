@@ -26,6 +26,13 @@ if __name__ == "__main__":
         help="CSV file to write to",
         required=True,
     )
+    parser.add_argument(
+        "-n",
+        "--number",
+        type=int,
+        help="number of repetitions per access pattern",
+        default=100,
+    )
 
     args = parser.parse_args()
 
@@ -35,7 +42,7 @@ if __name__ == "__main__":
         w.writeheader()
 
         for p, b in COMBINATIONS:
-            for i in range(100):
+            for i in range(args.number):
                 lo = [v for v, k in enumerate(b) for _ in range(k)]
 
                 random.shuffle(lo)
